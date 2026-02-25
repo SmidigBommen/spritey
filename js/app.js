@@ -241,7 +241,7 @@ class App {
         this._updateMiniPreview();
         return;
       }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && e.shiftKey) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && e.shiftKey) {
         e.preventDefault();
         this.history.redo();
         this._updateMiniPreview();
