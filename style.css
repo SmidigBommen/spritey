@@ -68,6 +68,11 @@ body {
   letter-spacing: 0.5px;
 }
 
+.project-name {
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
 /* ── Top Actions ── */
 .top-actions {
   display: flex;

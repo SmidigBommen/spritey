@@ -78,6 +78,7 @@ class App {
     this.toolbar.setActive(this.activeTool);
     this.bottomBar.setZoom(this.renderer.zoom);
     this.bottomBar.setSize(this.project.width);
+    this._updateProjectName();
   }
 
   _setupToolSelection() {
@@ -256,13 +257,16 @@ class App {
       // Save / Export shortcuts
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 's') {
         e.preventDefault();
-        ProjectSerializer.downloadProject(this.project);
+        if (!this.project.name || this.project.name === 'Untitled') {
+          this._promptAndSave(() => ProjectSerializer.downloadProject(this.project));
+        } else {
+          ProjectSerializer.downloadProject(this.project);
+        }
         return;
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && !e.shiftKey) {
         e.preventDefault();
-        ProjectSerializer.saveToStorage(this.project);
-        this._showFeedback(document.getElementById('btn-save'), 'Saved!');
+        this._promptAndSave();
         return;
       }
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'e') {
@@ -408,8 +412,7 @@ class App {
 
   _setupSaveLoadEvents() {
     document.getElementById('btn-save').addEventListener('click', () => {
-      ProjectSerializer.saveToStorage(this.project);
-      this._showFeedback(document.getElementById('btn-save'), 'Saved!');
+      this._promptAndSave();
     });
 
     document.getElementById('btn-load').addEventListener('click', () => {
@@ -419,7 +422,11 @@ class App {
     });
 
     document.getElementById('btn-download-project').addEventListener('click', () => {
-      ProjectSerializer.downloadProject(this.project);
+      if (!this.project.name || this.project.name === 'Untitled') {
+        this._promptAndSave(() => ProjectSerializer.downloadProject(this.project));
+      } else {
+        ProjectSerializer.downloadProject(this.project);
+      }
     });
 
     document.getElementById('btn-upload-project').addEventListener('click', async () => {
@@ -428,12 +435,29 @@ class App {
     });
   }
 
+  _promptAndSave(callback) {
+    const name = prompt('Project name:', this.project.name || 'Untitled');
+    if (name === null) return;
+    this.project.name = name.trim() || 'Untitled';
+    this._updateProjectName();
+    ProjectSerializer.saveToStorage(this.project);
+    this._showFeedback(document.getElementById('btn-save'), 'Saved!');
+    if (callback) callback();
+  }
+
+  _updateProjectName() {
+    const el = document.getElementById('project-name');
+    const name = this.project.name;
+    el.textContent = (name && name !== 'Untitled') ? `— ${name}` : '— unnamed';
+  }
+
   _onProjectLoaded() {
     this.history.reset();
     this.renderer.resetView();
     this.bottomBar.setSize(this.project.width);
     this._setupMiniPreview();
     this._updateMiniPreview();
+    this._updateProjectName();
     eventBus.emit('layers:changed');
     eventBus.emit('canvas:dirty');
   }
