@@ -64,11 +64,16 @@ A fully functional pixel art editor with drawing tools, color system, undo/redo,
 
 ---
 
-## Milestone 3: Templates (next)
+## Milestone 3: Templates ✅ (16x16 done, 32x32 pending)
 
-- Template data format (JSON), TemplatePart with color-slot tinting
-- Pre-built pixel art parts (humanoids, creatures, items)
-- TemplateMode + TemplatePanel UI
+### What was built
+- Template data format with color-slot tinting, 10 hand-crafted 16x16 templates
+- Categories: Humanoid (Knight, Mage, Archer), Creature (Slime, Bat, Skeleton), Item (Sword, Potion, Shield, Chest)
+- TemplatePanel UI with preview, color slot pickers, apply button
+
+### Pending: 32x32 templates
+- Source from CC0/open-license sprite packs rather than hand-crafting
+- Template system already supports 32x32 (size check in place)
 
 ## Milestone 4: Export + Save/Load ✅
 
