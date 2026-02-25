@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sprite Creator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Top Bar -->
+    <header id="top-bar">
+      <div class="app-title">Sprite Creator</div>
+      <div class="top-right">
+        <div class="mini-preview-wrap">
+          <span class="mini-label">Preview</span>
+          <canvas id="mini-preview"></canvas>
+        </div>
+      </div>
+    </header>
+
+    <!-- Left Sidebar: Tools -->
+    <aside id="toolbar"></aside>
+
+    <!-- Main Canvas Area -->
+    <main id="canvas-area">
+      <canvas id="main-canvas"></canvas>
+    </main>
+
+    <!-- Right Sidebar: Colors + Layers -->
+    <aside id="right-panel">
+      <div class="panel-tabs">
+        <button class="panel-tab active" data-tab="color">Color</button>
+        <button class="panel-tab" data-tab="layers">Layers</button>
+      </div>
+      <div id="color-section">
+        <div id="color-picker"></div>
+      </div>
+      <div id="layer-panel" class="hidden"></div>
+      <div id="palette-panel"></div>
+    </aside>
+
+    <!-- Bottom Bar -->
+    <footer id="bottom-bar"></footer>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
