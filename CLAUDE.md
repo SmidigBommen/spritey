@@ -98,3 +98,4 @@ python3 -m http.server
 - Use a MVP approach
 - Use well known principles and patterns in your code
 - Create a plan.md file with the implementation plan before starting development
+- Never add Co-Authored-By or any AI attribution to commit messages

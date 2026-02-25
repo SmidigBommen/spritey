@@ -10,7 +10,7 @@ export class CanvasRenderer {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.project = project;
-    this._zoom = 16;
+    this._zoom = 24;
     this._panX = 0;
     this._panY = 0;
     this._dirty = true;

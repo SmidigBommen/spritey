@@ -15,7 +15,8 @@ import { ColorPicker } from './ui/ColorPicker.js';
 import { PalettePanel } from './ui/PalettePanel.js';
 import { BottomBar } from './ui/BottomBar.js';
 import { LayerPanel } from './ui/LayerPanel.js';
-import { rgbToHex } from './core/ColorUtils.js';
+import { TemplatePanel } from './ui/TemplatePanel.js';
+import { rgbToHex, hexToRgb } from './core/ColorUtils.js';
 
 class App {
   constructor() {
@@ -52,6 +53,7 @@ class App {
     this.palettePanel = new PalettePanel(document.getElementById('palette-panel'));
     this.bottomBar = new BottomBar(document.getElementById('bottom-bar'));
     this.layerPanel = new LayerPanel(document.getElementById('layer-panel'), this.project);
+    this.templatePanel = new TemplatePanel(document.getElementById('template-panel'));
 
     // Mini preview
     this._miniCanvas = document.getElementById('mini-preview');
@@ -66,6 +68,7 @@ class App {
     this._setupKeyboardShortcuts();
     this._setupMiniPreview();
     this._setupTabs();
+    this._setupTemplateEvents();
 
     // Initial state
     this.toolbar.setActive(this.activeTool);
@@ -196,7 +199,7 @@ class App {
       this.renderer.zoom = this.renderer.zoom - Math.max(1, Math.floor(this.renderer.zoom / 4));
     });
     eventBus.on('zoom:reset', () => {
-      this.renderer.zoom = 16;
+      this.renderer.zoom = 24;
       this.renderer.resetView();
     });
 
@@ -290,23 +293,43 @@ class App {
 
   _setupTabs() {
     const tabs = document.querySelectorAll('.panel-tab');
-    const colorSection = document.getElementById('color-section');
-    const layerPanel = document.getElementById('layer-panel');
+    const sections = {
+      color: document.getElementById('color-section'),
+      layers: document.getElementById('layer-panel'),
+      templates: document.getElementById('template-panel'),
+    };
+    const palettePanel = document.getElementById('palette-panel');
 
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
         tabs.forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
 
-        const which = tab.dataset.tab;
-        if (which === 'color') {
-          colorSection.classList.remove('hidden');
-          layerPanel.classList.add('hidden');
-        } else {
-          colorSection.classList.add('hidden');
-          layerPanel.classList.remove('hidden');
+        const active = tab.dataset.tab;
+        for (const [key, el] of Object.entries(sections)) {
+          el.classList.toggle('hidden', key !== active);
         }
+        palettePanel.classList.toggle('hidden', active !== 'color');
       });
+    });
+  }
+
+  _setupTemplateEvents() {
+    eventBus.on('template:apply', ({ template, colors }) => {
+      if (template.size !== this.project.width) return;
+
+      this.history.pushState();
+      const size = template.size;
+      for (let i = 0; i < template.pixels.length; i++) {
+        const slot = template.pixels[i];
+        if (slot === 0) continue;
+        const [r, g, b] = hexToRgb(colors[slot - 1]);
+        const x = i % size;
+        const y = Math.floor(i / size);
+        this.project.setPixel(x, y, r, g, b, 255);
+      }
+      eventBus.emit('canvas:dirty');
+      this._updateMiniPreview();
     });
   }
 
