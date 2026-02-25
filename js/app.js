@@ -255,18 +255,9 @@ class App {
       }
 
       // Save / Export shortcuts
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 's') {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
-        if (!this.project.name || this.project.name === 'Untitled') {
-          this._promptAndSave(() => ProjectSerializer.downloadProject(this.project));
-        } else {
-          ProjectSerializer.downloadProject(this.project);
-        }
-        return;
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && !e.shiftKey) {
-        e.preventDefault();
-        this._promptAndSave();
+        this._saveProject();
         return;
       }
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'e') {
@@ -412,37 +403,23 @@ class App {
 
   _setupSaveLoadEvents() {
     document.getElementById('btn-save').addEventListener('click', () => {
-      this._promptAndSave();
+      this._saveProject();
     });
 
-    document.getElementById('btn-load').addEventListener('click', () => {
-      if (ProjectSerializer.loadFromStorage(this.project)) {
-        this._onProjectLoaded();
-      }
-    });
-
-    document.getElementById('btn-download-project').addEventListener('click', () => {
-      if (!this.project.name || this.project.name === 'Untitled') {
-        this._promptAndSave(() => ProjectSerializer.downloadProject(this.project));
-      } else {
-        ProjectSerializer.downloadProject(this.project);
-      }
-    });
-
-    document.getElementById('btn-upload-project').addEventListener('click', async () => {
+    document.getElementById('btn-open').addEventListener('click', async () => {
       const loaded = await ProjectSerializer.uploadProject(this.project);
       if (loaded) this._onProjectLoaded();
     });
   }
 
-  _promptAndSave(callback) {
-    const name = prompt('Project name:', this.project.name || 'Untitled');
-    if (name === null) return;
-    this.project.name = name.trim() || 'Untitled';
-    this._updateProjectName();
-    ProjectSerializer.saveToStorage(this.project);
-    this._showFeedback(document.getElementById('btn-save'), 'Saved!');
-    if (callback) callback();
+  _saveProject() {
+    if (!this.project.name || this.project.name === 'Untitled') {
+      const name = prompt('Project name:', this.project.name || 'Untitled');
+      if (name === null) return;
+      this.project.name = name.trim() || 'Untitled';
+      this._updateProjectName();
+    }
+    ProjectSerializer.downloadProject(this.project);
   }
 
   _updateProjectName() {
