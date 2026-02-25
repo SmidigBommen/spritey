@@ -99,11 +99,9 @@ B=pencil, E=eraser, G=fill, L=line, R=rect, I=eyedropper, S=select, M=symmetry, 
 
 ## Running
 
-```sh
-npx serve .
-# or
-python3 -m http.server
-```
+Dev server: `npx serve .` (port 3000). To stop: `lsof -ti:3000 | xargs kill`
+
+Also hosted on GitHub Pages: https://smidigbommen.github.io/spritey/
 
 ## Conventions
 
