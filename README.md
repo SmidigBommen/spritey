@@ -112,6 +112,117 @@ Version 1 files (single layer list, no frames) are loaded and auto-converted to 
 - **Layer Sheet**: Horizontal strip of each visible layer as a PNG
 - **Animation Sheet**: Horizontal strip of all frames (flattened) as a PNG
 
+## Using Exports in Your Game
+
+### Coordinate System
+
+- Origin `(0, 0)` is the **top-left** corner
+- X increases to the right, Y increases downward
+- This matches canvas, CSS, and most game engine conventions (Unity, Godot, Phaser, etc.)
+
+### PNG Sprites
+
+Exported PNGs use **nearest-neighbor scaling** to preserve crisp pixels. When loading in your game engine, make sure to disable texture filtering (bilinear/trilinear) or the sprite will look blurry.
+
+```
+Engine setting:
+  Unity         → Filter Mode: "Point (no filter)" on the texture import
+  Godot         → Texture → Filter: "Nearest"
+  Phaser        → this.textures.get('sprite').setFilter(Phaser.Textures.FilterMode.NEAREST)
+  CSS           → image-rendering: pixelated
+  Canvas2D      → ctx.imageSmoothingEnabled = false
+```
+
+### Animation Sheet
+
+The animation sheet is a horizontal strip of all frames side by side. Each frame is `width × height` pixels (before scaling).
+
+```
+┌────────┬────────┬────────┬────────┐
+│ Frame 0│ Frame 1│ Frame 2│ Frame 3│   height: sprite height
+└────────┴────────┴────────┴────────┘
+  width    width    width    width
+```
+
+To extract frame `i` at scale `s` from the sheet, use the region:
+
+```
+x: i * width * s
+y: 0
+w: width * s
+h: height * s
+```
+
+### Animated GIF
+
+The exported GIF loops forever and preserves transparency. Frame timing uses the FPS value set in the timeline. GIFs work directly in browsers, Discord, social media, etc. — good for sharing, not ideal for game engines (use the animation sheet or project file instead).
+
+### Loading the Project File (.json)
+
+The project file contains all frames, layers, and pixel data. This is useful if your game needs to composite layers at runtime or access individual layer data.
+
+**Decoding pixel data (JavaScript):**
+
+```js
+function decodePixels(base64, width, height) {
+  const binary = atob(base64);
+  const pixels = new Uint8ClampedArray(width * height * 4);
+  for (let i = 0; i < binary.length; i++) {
+    pixels[i] = binary.charCodeAt(i);
+  }
+  return pixels; // RGBA, row-major, 4 bytes per pixel
+}
+```
+
+**Flattening layers (compositing visible layers bottom-to-top):**
+
+```js
+function flattenLayers(frame, width, height) {
+  const total = width * height * 4;
+  const result = new Uint8ClampedArray(total);
+
+  for (const layer of frame.layers) {
+    if (!layer.visible) continue;
+    const src = decodePixels(layer.pixels, width, height);
+    const opacity = layer.opacity ?? 1;
+
+    for (let i = 0; i < total; i += 4) {
+      const sa = (src[i + 3] / 255) * opacity;
+      if (sa === 0) continue;
+      const da = result[i + 3] / 255;
+      const outA = sa + da * (1 - sa);
+      if (outA === 0) continue;
+      result[i]     = (src[i]     * sa + result[i]     * da * (1 - sa)) / outA;
+      result[i + 1] = (src[i + 1] * sa + result[i + 1] * da * (1 - sa)) / outA;
+      result[i + 2] = (src[i + 2] * sa + result[i + 2] * da * (1 - sa)) / outA;
+      result[i + 3] = outA * 255;
+    }
+  }
+  return result;
+}
+```
+
+**Playing animation from project data:**
+
+```js
+const project = JSON.parse(fileContents);
+const frames = project.frames.map(f => flattenLayers(f, project.width, project.height));
+let current = 0;
+
+function drawFrame(ctx) {
+  const imgData = ctx.createImageData(project.width, project.height);
+  imgData.data.set(frames[current]);
+  ctx.putImageData(imgData, 0, 0);
+  current = (current + 1) % frames.length;
+}
+
+setInterval(drawFrame, 1000 / desiredFPS, canvasContext);
+```
+
+### Layer Sheet
+
+The layer sheet places each **visible layer** of the current frame side by side. This is useful for games that composite layers separately (e.g., character body + equipment as separate draw calls).
+
 ## Tech Stack
 
 Vanilla JS with ES modules. No framework, no build tools, no dependencies. Single HTML page with CSS Grid layout and a dark theme.
