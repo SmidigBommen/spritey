@@ -492,7 +492,7 @@ class App {
 
     document.getElementById('btn-export-gif').addEventListener('click', async () => {
       const scale = parseInt(scaleSelect.value);
-      const blob = await ExportManager.exportGIF(this.project, scale);
+      const blob = await ExportManager.exportGIF(this.project, scale, this.player.fps);
       ExportManager.downloadBlob(blob, `${this.project.name || 'sprite'}.gif`);
       dropdown.classList.add('hidden');
     });

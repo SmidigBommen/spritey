@@ -93,20 +93,20 @@ export class ExportManager {
    * Uses a simple manual GIF encoder (no external library).
    * @param {Project} project
    * @param {number} scale
+   * @param {number} fps - Frames per second for GIF timing
    * @returns {Promise<Blob>}
    */
-  static async exportGIF(project, scale = 1) {
+  static async exportGIF(project, scale = 1, fps = 10) {
     const { width, height, frameCount } = project;
     const w = width * scale;
     const h = height * scale;
+    const delay = Math.max(1, Math.round(100 / fps)); // GIF delay in centiseconds
 
-    // Collect frame canvases and delays
     const frames = [];
     for (let i = 0; i < frameCount; i++) {
       const pixels = project.flattenFrame(i);
       const canvas = ExportManager.renderToCanvas(pixels, width, height, scale);
-      const delay = Math.round(project.getFrameDuration(i) / 10); // GIF delay in centiseconds
-      frames.push({ canvas, delay: Math.max(1, delay) });
+      frames.push({ canvas, delay });
     }
 
     return ExportManager._encodeGIF(frames, w, h);

@@ -9,7 +9,7 @@ Pixel art sprite creator for making game sprites (16x16 and 32x32). Browser-base
 - **Symmetry drawing**: Mirror across X, Y, or both axes
 - **Layer system**: Multiple layers with visibility, opacity, drag-to-reorder
 - **Color picker**: HSV picker with hex input
-- **Palettes**: PICO-8, NES, Endesga-32, Sweetie 16, and more
+- **Palettes**: PICO-8, NES, Endesga-32, Sweetie 16, Resurrect 64, Grayscale
 - **Templates**: 10 recolorable sprite templates for quick starts
 - **Animation**: Frame-by-frame animation with timeline, playback, onion skinning
 - **Export**: PNG at 1x-8x scale, animated GIF, sprite sheets, animation sheets, clipboard copy
@@ -108,7 +108,7 @@ Version 1 files (single layer list, no frames) are loaded and auto-converted to 
 ### Export Formats
 
 - **PNG**: Standard PNG with nearest-neighbor scaling at 1x, 2x, 4x, or 8x
-- **GIF**: Animated GIF with per-frame durations, looping, transparency support
+- **GIF**: Animated GIF using timeline FPS, looping, transparency support
 - **Layer Sheet**: Horizontal strip of each visible layer as a PNG
 - **Animation Sheet**: Horizontal strip of all frames (flattened) as a PNG
 
@@ -233,5 +233,5 @@ Vanilla JS with ES modules. No framework, no build tools, no dependencies. Singl
 - **Frame system**: `Project.frames[]` where each frame has its own layers and duration. `project.layers` is a getter into the active frame
 - **Layer system**: All tools write to the active layer via `project.setPixel()`, rendering composites via Porter-Duff over
 - **History**: Two snapshot types — single-frame for drawing ops, full-frames for frame-level ops
-- **Animation**: `AnimationPlayer` cycles frames via setTimeout with per-frame durations
+- **Animation**: `AnimationPlayer` cycles frames via setTimeout using FPS-based timing
 - **Tools**: All extend a `Tool` base class with `onPointerDown/Move/Up` interface
