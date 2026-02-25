@@ -5,6 +5,10 @@ const CHECKERBOARD_DARK = '#2a2a2a';
 const GRID_COLOR = 'rgba(255,255,255,0.08)';
 const GRID_COLOR_STRONG = 'rgba(255,255,255,0.2)';
 
+// Onion skin tint: blue for previous frames, red for next
+const ONION_PREV_TINT = [80, 120, 255];
+const ONION_NEXT_TINT = [255, 100, 80];
+
 export class CanvasRenderer {
   constructor(canvas, project) {
     this.canvas = canvas;
@@ -23,6 +27,9 @@ export class CanvasRenderer {
 
     // Selection rectangle in pixel coords { x, y, w, h }
     this.selectionRect = null;
+
+    // Onion skinning
+    this.onionSkin = { enabled: false, before: 1, after: 1, opacity: 0.25 };
 
     this._resizeCanvas();
     this._setupEvents();
@@ -162,6 +169,11 @@ export class CanvasRenderer {
       }
     }
 
+    // Draw onion skin (before current pixels)
+    if (this.onionSkin.enabled && this.project.frameCount > 1) {
+      this._drawOnionFrames(ctx, originX, originY, pw, ph, z);
+    }
+
     // Draw composited pixels (all layers)
     const pixels = this.project.flattenPixels();
     for (let py = 0; py < ph; py++) {
@@ -248,6 +260,48 @@ export class CanvasRenderer {
     ctx.strokeStyle = 'rgba(255,255,255,0.15)';
     ctx.lineWidth = 1;
     ctx.strokeRect(originX + 0.5, originY + 0.5, spriteW, spriteH);
+  }
+
+  _drawOnionFrames(ctx, originX, originY, pw, ph, z) {
+    const { before, after, opacity } = this.onionSkin;
+    const current = this.project.activeFrameIndex;
+    const count = this.project.frameCount;
+
+    // Previous frames (blue tint)
+    for (let d = 1; d <= before; d++) {
+      const idx = current - d;
+      if (idx < 0) break;
+      const fadeOpacity = opacity * (1 - (d - 1) / before);
+      this._drawOnionFrame(ctx, originX, originY, pw, ph, z, idx, ONION_PREV_TINT, fadeOpacity);
+    }
+
+    // Next frames (red tint)
+    for (let d = 1; d <= after; d++) {
+      const idx = current + d;
+      if (idx >= count) break;
+      const fadeOpacity = opacity * (1 - (d - 1) / after);
+      this._drawOnionFrame(ctx, originX, originY, pw, ph, z, idx, ONION_NEXT_TINT, fadeOpacity);
+    }
+  }
+
+  _drawOnionFrame(ctx, originX, originY, pw, ph, z, frameIndex, tint, alpha) {
+    const pixels = this.project.flattenFrame(frameIndex);
+    if (!pixels) return;
+    const [tr, tg, tb] = tint;
+
+    for (let py = 0; py < ph; py++) {
+      for (let px = 0; px < pw; px++) {
+        const i = (py * pw + px) * 4;
+        const a = pixels[i + 3];
+        if (a === 0) continue;
+        // Blend pixel color with tint (50/50 mix)
+        const r = (pixels[i] + tr) >> 1;
+        const g = (pixels[i + 1] + tg) >> 1;
+        const b = (pixels[i + 2] + tb) >> 1;
+        ctx.fillStyle = `rgba(${r},${g},${b},${(a / 255) * alpha})`;
+        ctx.fillRect(originX + px * z, originY + py * z, z, z);
+      }
+    }
   }
 
   resetView() {

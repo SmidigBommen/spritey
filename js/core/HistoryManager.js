@@ -20,16 +20,23 @@ export class HistoryManager {
 
   undo() {
     if (this._undoStack.length === 0) return;
-    this._redoStack.push(this.project.snapshotLayers());
     const prev = this._undoStack.pop();
+    // Save matching snapshot type so redo restores correctly
+    const current = prev.type === 'full'
+      ? this.project.snapshotAllFrames()
+      : this.project.snapshotLayers();
+    this._redoStack.push(current);
     this.project.restoreSnapshot(prev);
     this._emitState();
   }
 
   redo() {
     if (this._redoStack.length === 0) return;
-    this._undoStack.push(this.project.snapshotLayers());
     const next = this._redoStack.pop();
+    const current = next.type === 'full'
+      ? this.project.snapshotAllFrames()
+      : this.project.snapshotLayers();
+    this._undoStack.push(current);
     this.project.restoreSnapshot(next);
     this._emitState();
   }

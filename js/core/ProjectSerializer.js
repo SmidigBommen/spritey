@@ -1,44 +1,56 @@
 import { Layer } from './Layer.js';
 
-const STORAGE_KEY = 'spritey_project';
+const CURRENT_VERSION = 2;
 
 export class ProjectSerializer {
   /**
-   * Serialize a Project to a plain object (version 1 format).
-   * Pixel data is stored as base64-encoded binary.
+   * Serialize a Project to version 2 format with frames.
    */
   static serialize(project) {
     return {
-      version: 1,
+      version: CURRENT_VERSION,
       name: project.name,
       width: project.width,
       height: project.height,
+      activeFrameIndex: project.activeFrameIndex,
       activeLayerIndex: project.activeLayerIndex,
-      layers: project.layers.map(layer => ({
-        id: layer.id,
-        name: layer.name,
-        visible: layer.visible,
-        opacity: layer.opacity,
-        pixels: ProjectSerializer._encodePixels(layer.pixels),
+      frames: project.frames.map(frame => ({
+        duration: frame.duration,
+        layers: frame.layers.map(layer => ({
+          id: layer.id,
+          name: layer.name,
+          visible: layer.visible,
+          opacity: layer.opacity,
+          pixels: ProjectSerializer._encodePixels(layer.pixels),
+        })),
       })),
     };
   }
 
   /**
    * Deserialize data into an existing Project instance (mutates in-place).
-   * Keeps all external references to `project` valid.
+   * Supports v1 (single layer list) and v2 (frames) formats.
    */
   static deserialize(project, data) {
-    if (!data || data.version !== 1) {
+    if (!data || !data.version) {
       throw new Error('Invalid project format');
     }
 
     project.name = data.name || 'Untitled';
     project._width = data.width;
     project._height = data.height;
-    project.activeLayerIndex = data.activeLayerIndex || 0;
 
-    project.layers = data.layers.map(ld => {
+    if (data.version === 1) {
+      ProjectSerializer._deserializeV1(project, data);
+    } else if (data.version === 2) {
+      ProjectSerializer._deserializeV2(project, data);
+    } else {
+      throw new Error(`Unsupported project version: ${data.version}`);
+    }
+  }
+
+  static _deserializeV1(project, data) {
+    const layers = data.layers.map(ld => {
       const layer = new Layer(data.width, data.height, ld.name);
       layer.id = ld.id;
       layer.visible = ld.visible !== false;
@@ -47,25 +59,41 @@ export class ProjectSerializer {
       return layer;
     });
 
-    if (project.layers.length === 0) {
-      project.layers = [new Layer(data.width, data.height, 'Layer 1')];
+    if (layers.length === 0) {
+      layers.push(new Layer(data.width, data.height, 'Layer 1'));
     }
-    project.activeLayerIndex = Math.min(project.activeLayerIndex, project.layers.length - 1);
+
+    // Wrap v1 layers into a single frame
+    project.frames = [{ layers, duration: 100 }];
+    project.activeFrameIndex = 0;
+    project.activeLayerIndex = Math.min(data.activeLayerIndex || 0, layers.length - 1);
   }
 
-  /** Save project to localStorage. */
-  static saveToStorage(project) {
-    const json = JSON.stringify(ProjectSerializer.serialize(project));
-    localStorage.setItem(STORAGE_KEY, json);
-  }
+  static _deserializeV2(project, data) {
+    project.frames = data.frames.map(fd => ({
+      duration: fd.duration || 100,
+      layers: fd.layers.map(ld => {
+        const layer = new Layer(data.width, data.height, ld.name);
+        layer.id = ld.id;
+        layer.visible = ld.visible !== false;
+        layer.opacity = ld.opacity ?? 1;
+        layer.pixels = ProjectSerializer._decodePixels(ld.pixels, data.width * data.height * 4);
+        return layer;
+      }),
+    }));
 
-  /** Load project from localStorage. Returns true if data was found. */
-  static loadFromStorage(project) {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return false;
-    const data = JSON.parse(raw);
-    ProjectSerializer.deserialize(project, data);
-    return true;
+    // Ensure at least one frame with one layer
+    if (project.frames.length === 0) {
+      project.frames = [{ layers: [new Layer(data.width, data.height, 'Layer 1')], duration: 100 }];
+    }
+    for (const frame of project.frames) {
+      if (frame.layers.length === 0) {
+        frame.layers.push(new Layer(data.width, data.height, 'Layer 1'));
+      }
+    }
+
+    project.activeFrameIndex = Math.min(data.activeFrameIndex || 0, project.frames.length - 1);
+    project.activeLayerIndex = Math.min(data.activeLayerIndex || 0, project.frames[project.activeFrameIndex].layers.length - 1);
   }
 
   /** Download project as a .json file. */

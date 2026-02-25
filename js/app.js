@@ -2,6 +2,7 @@ import { eventBus } from './core/EventBus.js';
 import { Project } from './core/Project.js';
 import { CanvasRenderer } from './core/CanvasRenderer.js';
 import { HistoryManager } from './core/HistoryManager.js';
+import { AnimationPlayer } from './core/AnimationPlayer.js';
 import { PencilTool } from './tools/PencilTool.js';
 import { EraserTool } from './tools/EraserTool.js';
 import { FillTool } from './tools/FillTool.js';
@@ -16,6 +17,7 @@ import { PalettePanel } from './ui/PalettePanel.js';
 import { BottomBar } from './ui/BottomBar.js';
 import { LayerPanel } from './ui/LayerPanel.js';
 import { TemplatePanel } from './ui/TemplatePanel.js';
+import { TimelinePanel } from './ui/TimelinePanel.js';
 import { ExportManager } from './core/ExportManager.js';
 import { ProjectSerializer } from './core/ProjectSerializer.js';
 import { rgbToHex, hexToRgb } from './core/ColorUtils.js';
@@ -29,6 +31,7 @@ class App {
       this.project
     );
     this.history = new HistoryManager(this.project);
+    this.player = new AnimationPlayer(this.project);
 
     // Colors
     this._primaryColor = [0, 0, 0, 255];
@@ -56,6 +59,7 @@ class App {
     this.bottomBar = new BottomBar(document.getElementById('bottom-bar'));
     this.layerPanel = new LayerPanel(document.getElementById('layer-panel'), this.project);
     this.templatePanel = new TemplatePanel(document.getElementById('template-panel'));
+    this.timelinePanel = new TimelinePanel(document.getElementById('timeline'), this.project);
 
     // Mini preview
     this._miniCanvas = document.getElementById('mini-preview');
@@ -67,6 +71,8 @@ class App {
     this._setupHistoryEvents();
     this._setupCanvasControls();
     this._setupLayerEvents();
+    this._setupFrameEvents();
+    this._setupPlaybackEvents();
     this._setupKeyboardShortcuts();
     this._setupMiniPreview();
     this._setupTabs();
@@ -105,6 +111,7 @@ class App {
     canvas.addEventListener('pointerdown', (e) => {
       if (e.button === 1) return; // Middle click = pan
       if (e.button === 2) return;
+      if (this.player.playing) return; // No drawing during playback
 
       const { x, y } = this.renderer.screenToPixel(e.clientX, e.clientY);
 
@@ -220,14 +227,72 @@ class App {
   }
 
   _setupLayerEvents() {
-    // These events are "commands" emitted by LayerPanel UI.
-    // Project methods emit `layers:changed` (state) in response.
     eventBus.on('layer:add', () => this.project.addLayer());
     eventBus.on('layer:delete', ({ index }) => this.project.deleteLayer(index));
     eventBus.on('layer:select', ({ index }) => this.project.setActiveLayer(index));
     eventBus.on('layer:reorder', ({ from, to }) => this.project.reorderLayer(from, to));
     eventBus.on('layer:visibility', ({ index, visible }) => this.project.setLayerVisibility(index, visible));
     eventBus.on('layer:opacity', ({ index, opacity }) => this.project.setLayerOpacity(index, opacity));
+  }
+
+  _setupFrameEvents() {
+    eventBus.on('frame:add', () => {
+      this._pushFullHistory();
+      this.project.addFrame();
+      this._updateMiniPreview();
+    });
+
+    eventBus.on('frame:duplicate', ({ index }) => {
+      this._pushFullHistory();
+      this.project.duplicateFrame(index);
+      this._updateMiniPreview();
+    });
+
+    eventBus.on('frame:delete', ({ index }) => {
+      this._pushFullHistory();
+      this.project.deleteFrame(index);
+      this._updateMiniPreview();
+    });
+
+    eventBus.on('frame:select', ({ index }) => {
+      this.project.setActiveFrame(index);
+      this._updateMiniPreview();
+    });
+
+    eventBus.on('frame:reorder', ({ from, to }) => {
+      this._pushFullHistory();
+      this.project.reorderFrame(from, to);
+    });
+
+    eventBus.on('frame:duration', ({ index, duration }) => {
+      this.project.setFrameDuration(index, duration);
+    });
+
+    eventBus.on('frame:switched', () => {
+      this._updateMiniPreview();
+    });
+  }
+
+  _setupPlaybackEvents() {
+    eventBus.on('playback:play', () => this.player.play());
+    eventBus.on('playback:pause', () => this.player.pause());
+    eventBus.on('playback:stop', () => this.player.stop());
+    eventBus.on('playback:fps', (fps) => { this.player.fps = fps; });
+
+    eventBus.on('onion:toggle', () => {
+      this.renderer.onionSkin.enabled = !this.renderer.onionSkin.enabled;
+      eventBus.emit('onion:changed', this.renderer.onionSkin.enabled);
+      eventBus.emit('canvas:dirty');
+    });
+  }
+
+  /** Push a full-frames snapshot for frame-level operations. */
+  _pushFullHistory() {
+    this.history._undoStack.push(this.project.snapshotAllFrames());
+    if (this.history._undoStack.length > this.history.maxSteps) {
+      this.history._undoStack.shift();
+    }
+    this.history._redoStack = [];
   }
 
   _setupKeyboardShortcuts() {
@@ -276,6 +341,47 @@ class App {
           this._selectTool.deleteSelection(this.project, { renderer: this.renderer });
           this._updateMiniPreview();
         }
+        return;
+      }
+
+      // Play/pause toggle
+      if (e.key === ' ') {
+        e.preventDefault();
+        if (this.project.frameCount > 1) {
+          this.player.play(); // toggles play/pause
+        }
+        return;
+      }
+
+      // Previous frame
+      if (key === ',' || key === '<') {
+        const prev = (this.project.activeFrameIndex - 1 + this.project.frameCount) % this.project.frameCount;
+        this.project.setActiveFrame(prev);
+        this._updateMiniPreview();
+        return;
+      }
+
+      // Next frame
+      if (key === '.' || key === '>') {
+        const next = (this.project.activeFrameIndex + 1) % this.project.frameCount;
+        this.project.setActiveFrame(next);
+        this._updateMiniPreview();
+        return;
+      }
+
+      // New frame
+      if (key === 'n') {
+        this._pushFullHistory();
+        this.project.addFrame();
+        this._updateMiniPreview();
+        return;
+      }
+
+      // Toggle onion skinning
+      if (key === 'o') {
+        this.renderer.onionSkin.enabled = !this.renderer.onionSkin.enabled;
+        eventBus.emit('onion:changed', this.renderer.onionSkin.enabled);
+        eventBus.emit('canvas:dirty');
         return;
       }
 
@@ -384,6 +490,20 @@ class App {
       dropdown.classList.add('hidden');
     });
 
+    document.getElementById('btn-export-gif').addEventListener('click', async () => {
+      const scale = parseInt(scaleSelect.value);
+      const blob = await ExportManager.exportGIF(this.project, scale);
+      ExportManager.downloadBlob(blob, `${this.project.name || 'sprite'}.gif`);
+      dropdown.classList.add('hidden');
+    });
+
+    document.getElementById('btn-export-anim-sheet').addEventListener('click', async () => {
+      const scale = parseInt(scaleSelect.value);
+      const blob = await ExportManager.exportAnimationSheet(this.project, scale);
+      ExportManager.downloadBlob(blob, `${this.project.name || 'sprite'}_anim_sheet.png`);
+      dropdown.classList.add('hidden');
+    });
+
     document.getElementById('btn-copy-clipboard').addEventListener('click', async () => {
       const btn = document.getElementById('btn-copy-clipboard');
       try {
@@ -435,6 +555,8 @@ class App {
     this._setupMiniPreview();
     this._updateMiniPreview();
     this._updateProjectName();
+    eventBus.emit('frames:changed');
+    eventBus.emit('frame:switched', this.project.activeFrameIndex);
     eventBus.emit('layers:changed');
     eventBus.emit('canvas:dirty');
   }

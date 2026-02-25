@@ -19,9 +19,12 @@ sprite-creator/
 │   ├── app.js                      # Entry point, wires everything together
 │   ├── core/
 │   │   ├── EventBus.js             # Pub/sub singleton (eventBus)
-│   │   ├── CanvasRenderer.js       # Viewport: zoom, pan, grid, checkerboard, selection rect
-│   │   ├── HistoryManager.js       # Undo/redo with full multi-layer snapshots
-│   │   ├── Project.js              # Canvas size, name, layer array, flattenPixels()
+│   │   ├── CanvasRenderer.js       # Viewport: zoom, pan, grid, checkerboard, onion skinning
+│   │   ├── HistoryManager.js       # Undo/redo with frame-aware snapshots
+│   │   ├── AnimationPlayer.js      # Frame playback loop with per-frame duration
+│   │   ├── Project.js              # Frames, layers, canvas size, flattenPixels/flattenFrame
+│   │   ├── ExportManager.js        # PNG, GIF, sprite sheet, animation sheet export
+│   │   ├── ProjectSerializer.js    # Save/load v1 & v2 project format
 │   │   ├── Layer.js                # Layer data class (pixels, visible, opacity, clone)
 │   │   └── ColorUtils.js           # HSV/RGB/Hex conversions
 │   ├── tools/
@@ -39,6 +42,7 @@ sprite-creator/
 │       ├── ColorPicker.js          # Canvas-based HSV picker
 │       ├── PalettePanel.js         # Preset palette swatches
 │       ├── LayerPanel.js           # Layer list: add/delete/reorder/visibility/opacity
+│       ├── TimelinePanel.js        # Frame thumbnails, playback controls, onion skin toggle
 │       └── BottomBar.js            # Size selector, zoom, cursor position
 └── assets/
     └── palettes/
@@ -48,10 +52,12 @@ sprite-creator/
 ## Architecture Patterns
 
 - **EventBus**: All cross-component communication goes through `eventBus.emit()`/`eventBus.on()`. Never call between components directly.
-- **Layer System**: `Project` holds `layers[]` (array of `Layer`) and `activeLayerIndex`. All tools write to `project.activeLayer` via `project.setPixel()`. Rendering composites all layers via `project.flattenPixels()` (Porter-Duff over).
+- **Frame System**: `Project.frames[]` where each frame has `{ layers[], duration }`. `project.layers` is a getter into the active frame — existing code works unchanged.
+- **Layer System**: All tools write to `project.activeLayer` via `project.setPixel()`. Rendering composites via `project.flattenPixels()` (Porter-Duff over). `flattenFrame(index)` composites a specific frame.
 - **Event Naming — avoid feedback loops**: UI components emit *command* events (e.g. `layer:add`). Core classes emit *state* events (e.g. `layers:changed`). Never use the same name for both.
-- **Rendering**: `requestAnimationFrame` loop with dirty flag in `CanvasRenderer`. Call `eventBus.emit('canvas:dirty')` to trigger re-render. Selection rect keeps renderer always dirty for marching-ants animation.
-- **History**: Full multi-layer snapshots. `project.snapshotLayers()` / `project.restoreSnapshot()`. `pushState()` before edits.
+- **Rendering**: `requestAnimationFrame` loop with dirty flag in `CanvasRenderer`. Call `eventBus.emit('canvas:dirty')` to trigger re-render. Onion skinning renders adjacent frames with blue/red tint.
+- **History**: Two snapshot types — `snapshotLayers()` for drawing ops (single frame), `snapshotAllFrames()` for frame-level ops. `restoreSnapshot()` detects type automatically.
+- **Animation**: `AnimationPlayer` cycles frames via setTimeout with per-frame durations. Drawing disabled during playback.
 - **Tools**: All tools extend `Tool` base class. Interface: `onPointerDown/Move/Up(x, y, project, ctx)`. `ctx` provides `{ color, renderer }`.
 
 ## Key Events
@@ -75,10 +81,21 @@ sprite-creator/
 | `canvas:resize` | BottomBar → app.js | number | Resize canvas (16 or 32) |
 | `zoom:changed` | Renderer → UI | number | Zoom level changed |
 | `cursor:move` | app.js → UI | `{x, y}` | Pixel coords under cursor |
+| `frame:add` | UI → app.js | — | Add new frame |
+| `frame:duplicate` | UI → app.js | `{ index }` | Duplicate frame |
+| `frame:delete` | UI → app.js | `{ index }` | Delete frame |
+| `frame:select` | UI → app.js | `{ index }` | Switch active frame |
+| `frame:reorder` | UI → app.js | `{ from, to }` | Reorder frames |
+| `frame:switched` | Project → UI | index | Active frame changed |
+| `frames:changed` | Project → UI | — | Frame list changed |
+| `playback:play/pause/stop` | UI → app.js | — | Playback controls |
+| `playback:started/paused/stopped` | Player → UI | — | Playback state changed |
+| `onion:toggle` | UI → app.js | — | Toggle onion skinning |
+| `onion:changed` | app.js → UI | boolean | Onion skin state changed |
 
 ## Keyboard Shortcuts
 
-B=pencil, E=eraser, G=fill, L=line, R=rect, I=eyedropper, S=select, M=symmetry, X=swap colors, Delete/Backspace=delete selection, Ctrl+Z=undo, Ctrl+Shift+Z=redo
+B=pencil, E=eraser, G=fill, L=line, R=rect, I=eyedropper, S=select, M=symmetry, X=swap colors, Delete/Backspace=delete selection, Ctrl+Z=undo, Ctrl+Shift+Z=redo, N=new frame, ,/.=prev/next frame, Space=play/pause, O=toggle onion skin
 
 ## Running
 
@@ -99,3 +116,52 @@ python3 -m http.server
 - Use well known principles and patterns in your code
 - Create a plan.md file with the implementation plan before starting development
 - Never add Co-Authored-By or any AI attribution to commit messages
+
+## IMPORTANT PROGRAMMING RULES:
+- Minimize code, be DRY
+  - Code is liability, logic is an opportunity for bugs
+  - We should have as little code as necessary to solve the problem
+  - Duplicated logic leads to drift and inconsistency which leads to tech debt, bugs and progress slowdown
+  - Important for both source- and test-code
+    - Examples:
+      - Reusable functions, fixtures, types
+      - Prefer table-driven/parameterized tests
+      - Create consts and variables for strings/numbers when they are repeated
+- Code should be clear and easily readable
+- Don't prematurely build abstractions
+- Use the right algorithms and datastructures for the problem
+- Fix root causes (no band-aid solutions)
+- Minimize external dependencies
+- Be defensive
+  - Examples:
+    - Validation for arguments and parameters
+    - Bounds and limits for sizes, parallelism etc
+- Fail fast/early
+- Return errors for user errors, use assertions for critical invariants and programmer errors
+- Prefer pure code - easily testable
+- Domain models should be free from infrastructure and dependencies
+- Parse, dont validate. Prefer representations that prevent invalid states by design
+- Be performant
+  - Avoid unneeded work and allocations
+  - Non-pessimize (don't write slow code for no reason)
+  - Examples:
+    - Minimize heap allocations (preallocate, reuse allocations, avoid closures, use stack, escape-analysis-friendly code)
+    - CPU cache friendly datastructures, algorithms and layout
+    - Minimize contention in parallel code
+    - Pass by value for small arguments (~16 bytes or less)
+    - Batching operations
+- Comments should explain _why_ something is done, never _what_ is being done
+  - Avoid obvious comments, we only want comments that explain non-obvious reasoning
+  - Should have comments: "magic numbers/strings" and non-obvious configuration values
+- Strict linting and static analysis
+  - Don't suppress lints or warnings without a very good reason
+- Warnings should be treated as errors
+  - Suppressions should be documented and well-reasoned
+
+## IMPORTANT BEHAVIORAL RULES:
+- In all interactions, be extremely concise
+- Be direct and straightforward in all responses
+- Avoid overly positive or enthusiastic language
+- Challenge assumptions and point out potential issues or flaws
+- Provide constructive criticism
+- Verify assumptions before proceeding

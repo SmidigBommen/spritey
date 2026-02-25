@@ -70,15 +70,17 @@ A fully functional pixel art editor with drawing tools, color system, undo/redo,
 - Pre-built pixel art parts (humanoids, creatures, items)
 - TemplateMode + TemplatePanel UI
 
-## Milestone 4: Export + Save/Load
+## Milestone 4: Export + Save/Load ✅
 
-- PNG export at 1x–8x scale, sprite sheets
-- localStorage save/load, clipboard copy
+- PNG export at 1x–8x scale, sprite sheets, clipboard copy
+- Save/Open project as .json files with name prompt
+- Export dropdown with scale selector
 
-## Milestone 5: Procedural Generation
+## Milestone 5: Procedural Generation — On Hold
 
 - Text prompt → procedural pixel art sprite
 - API integration point for real AI backends
+- Skipped: quality ceiling too low for procedural, AI adds unwanted dependencies
 
 ## Milestone 6: Animation
 

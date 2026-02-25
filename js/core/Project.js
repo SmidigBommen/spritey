@@ -6,21 +6,26 @@ export class Project {
     this.name = name;
     this._width = width;
     this._height = height;
-    this.layers = [new Layer(width, height, 'Layer 1')];
+    this.frames = [{ layers: [new Layer(width, height, 'Layer 1')], duration: 100 }];
+    this.activeFrameIndex = 0;
     this.activeLayerIndex = 0;
   }
 
   get width() { return this._width; }
   get height() { return this._height; }
 
+  get layers() { return this.frames[this.activeFrameIndex].layers; }
+  set layers(val) { this.frames[this.activeFrameIndex].layers = val; }
+
   get activeLayer() {
     return this.layers[this.activeLayerIndex];
   }
 
-  /** Backward-compat: direct pixel access points to active layer */
   get pixels() {
     return this.activeLayer.pixels;
   }
+
+  get frameCount() { return this.frames.length; }
 
   getPixel(x, y) {
     return this.activeLayer.getPixel(x, y);
@@ -30,12 +35,14 @@ export class Project {
     this.activeLayer.setPixel(x, y, r, g, b, a);
   }
 
-  /** Composite all visible layers (bottom to top) into a flat Uint8ClampedArray. */
-  flattenPixels() {
+  /** Composite all visible layers of a specific frame into a flat Uint8ClampedArray. */
+  flattenFrame(frameIndex) {
+    if (frameIndex < 0 || frameIndex >= this.frames.length) return null;
+    const layers = this.frames[frameIndex].layers;
     const total = this._width * this._height * 4;
     const result = new Uint8ClampedArray(total);
 
-    for (const layer of this.layers) {
+    for (const layer of layers) {
       if (!layer.visible) continue;
       const src = layer.pixels;
       const alpha = layer.opacity;
@@ -53,6 +60,92 @@ export class Project {
     }
     return result;
   }
+
+  /** Composite all visible layers of the active frame. */
+  flattenPixels() {
+    return this.flattenFrame(this.activeFrameIndex);
+  }
+
+  // ── Frame methods ──
+
+  addFrame() {
+    const frame = { layers: [new Layer(this._width, this._height, 'Layer 1')], duration: 100 };
+    this.frames.splice(this.activeFrameIndex + 1, 0, frame);
+    this.activeFrameIndex++;
+    this.activeLayerIndex = 0;
+    eventBus.emit('frame:switched', this.activeFrameIndex);
+    eventBus.emit('frames:changed');
+    eventBus.emit('layers:changed');
+    eventBus.emit('canvas:dirty');
+  }
+
+  duplicateFrame(index) {
+    if (index < 0 || index >= this.frames.length) return;
+    const src = this.frames[index];
+    const frame = {
+      layers: src.layers.map(l => l.clone()),
+      duration: src.duration,
+    };
+    this.frames.splice(index + 1, 0, frame);
+    this.activeFrameIndex = index + 1;
+    this.activeLayerIndex = Math.min(this.activeLayerIndex, frame.layers.length - 1);
+    eventBus.emit('frame:switched', this.activeFrameIndex);
+    eventBus.emit('frames:changed');
+    eventBus.emit('layers:changed');
+    eventBus.emit('canvas:dirty');
+  }
+
+  deleteFrame(index) {
+    if (this.frames.length <= 1) return;
+    if (index < 0 || index >= this.frames.length) return;
+    this.frames.splice(index, 1);
+    this.activeFrameIndex = Math.min(this.activeFrameIndex, this.frames.length - 1);
+    this.activeLayerIndex = Math.min(this.activeLayerIndex, this.layers.length - 1);
+    eventBus.emit('frame:switched', this.activeFrameIndex);
+    eventBus.emit('frames:changed');
+    eventBus.emit('layers:changed');
+    eventBus.emit('canvas:dirty');
+  }
+
+  reorderFrame(from, to) {
+    if (from === to) return;
+    if (from < 0 || from >= this.frames.length) return;
+    if (to < 0 || to >= this.frames.length) return;
+    const [frame] = this.frames.splice(from, 1);
+    this.frames.splice(to, 0, frame);
+    if (this.activeFrameIndex === from) {
+      this.activeFrameIndex = to;
+    } else if (from < to && this.activeFrameIndex > from && this.activeFrameIndex <= to) {
+      this.activeFrameIndex--;
+    } else if (from > to && this.activeFrameIndex >= to && this.activeFrameIndex < from) {
+      this.activeFrameIndex++;
+    }
+    eventBus.emit('frames:changed');
+    eventBus.emit('canvas:dirty');
+  }
+
+  setActiveFrame(index) {
+    if (index < 0 || index >= this.frames.length) return;
+    if (index === this.activeFrameIndex) return;
+    this.activeFrameIndex = index;
+    this.activeLayerIndex = Math.min(this.activeLayerIndex, this.layers.length - 1);
+    eventBus.emit('frame:switched', this.activeFrameIndex);
+    eventBus.emit('layers:changed');
+    eventBus.emit('canvas:dirty');
+  }
+
+  getFrameDuration(index) {
+    if (index < 0 || index >= this.frames.length) return 100;
+    return this.frames[index].duration;
+  }
+
+  setFrameDuration(index, ms) {
+    if (index < 0 || index >= this.frames.length) return;
+    this.frames[index].duration = Math.max(10, Math.min(10000, ms));
+    eventBus.emit('frames:changed');
+  }
+
+  // ── Layer methods ──
 
   addLayer() {
     const layer = new Layer(this._width, this._height, `Layer ${this.layers.length + 1}`);
@@ -111,22 +204,24 @@ export class Project {
     this._width = width;
     this._height = height;
 
-    for (const layer of this.layers) {
-      const oldPixels = layer.pixels;
-      layer.pixels = new Uint8ClampedArray(width * height * 4);
-      layer.width = width;
-      layer.height = height;
+    for (const frame of this.frames) {
+      for (const layer of frame.layers) {
+        const oldPixels = layer.pixels;
+        layer.pixels = new Uint8ClampedArray(width * height * 4);
+        layer.width = width;
+        layer.height = height;
 
-      const copyW = Math.min(oldW, width);
-      const copyH = Math.min(oldH, height);
-      for (let y = 0; y < copyH; y++) {
-        for (let x = 0; x < copyW; x++) {
-          const oldIdx = (y * oldW + x) * 4;
-          const newIdx = (y * width + x) * 4;
-          layer.pixels[newIdx]     = oldPixels[oldIdx];
-          layer.pixels[newIdx + 1] = oldPixels[oldIdx + 1];
-          layer.pixels[newIdx + 2] = oldPixels[oldIdx + 2];
-          layer.pixels[newIdx + 3] = oldPixels[oldIdx + 3];
+        const copyW = Math.min(oldW, width);
+        const copyH = Math.min(oldH, height);
+        for (let y = 0; y < copyH; y++) {
+          for (let x = 0; x < copyW; x++) {
+            const oldIdx = (y * oldW + x) * 4;
+            const newIdx = (y * width + x) * 4;
+            layer.pixels[newIdx]     = oldPixels[oldIdx];
+            layer.pixels[newIdx + 1] = oldPixels[oldIdx + 1];
+            layer.pixels[newIdx + 2] = oldPixels[oldIdx + 2];
+            layer.pixels[newIdx + 3] = oldPixels[oldIdx + 3];
+          }
         }
       }
     }
@@ -140,23 +235,53 @@ export class Project {
     eventBus.emit('canvas:dirty');
   }
 
-  /** Snapshot all layers for history */
+  /** Snapshot active frame's layers (for drawing operations). */
   snapshotLayers() {
     return {
+      type: 'frame',
+      activeFrameIndex: this.activeFrameIndex,
       layers: this.layers.map(l => l.clone()),
       activeLayerIndex: this.activeLayerIndex,
     };
   }
 
-  /** Restore from a history snapshot */
+  /** Snapshot all frames (for frame-level operations like add/delete/reorder). */
+  snapshotAllFrames() {
+    return {
+      type: 'full',
+      activeFrameIndex: this.activeFrameIndex,
+      activeLayerIndex: this.activeLayerIndex,
+      frames: this.frames.map(f => ({
+        duration: f.duration,
+        layers: f.layers.map(l => l.clone()),
+      })),
+    };
+  }
+
+  /** Restore from a history snapshot. */
   restoreSnapshot(snapshot) {
-    this.layers = snapshot.layers.map(l => l.clone());
-    this.activeLayerIndex = snapshot.activeLayerIndex;
+    if (snapshot.type === 'full') {
+      this.frames = snapshot.frames.map(f => ({
+        duration: f.duration,
+        layers: f.layers.map(l => l.clone()),
+      }));
+      this.activeFrameIndex = Math.min(snapshot.activeFrameIndex, this.frames.length - 1);
+      this.activeLayerIndex = Math.min(snapshot.activeLayerIndex, this.layers.length - 1);
+      eventBus.emit('frames:changed');
+    } else {
+      // 'frame' snapshot — restore single frame's layers
+      const fi = snapshot.activeFrameIndex;
+      if (fi >= 0 && fi < this.frames.length) {
+        this.frames[fi].layers = snapshot.layers.map(l => l.clone());
+      }
+      this.activeFrameIndex = Math.min(fi, this.frames.length - 1);
+      this.activeLayerIndex = Math.min(snapshot.activeLayerIndex, this.layers.length - 1);
+    }
+    eventBus.emit('frame:switched', this.activeFrameIndex);
     eventBus.emit('layers:changed');
     eventBus.emit('canvas:dirty');
   }
 
-  /** Legacy helpers */
   clonePixels() {
     return new Uint8ClampedArray(this.activeLayer.pixels);
   }
