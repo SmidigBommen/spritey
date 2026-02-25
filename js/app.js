@@ -449,7 +449,7 @@ class App {
     const size = this.project.width;
     this._miniCanvas.width = size;
     this._miniCanvas.height = size;
-    const displaySize = 64;
+    const displaySize = 32;
     this._miniCanvas.style.width = displaySize + 'px';
     this._miniCanvas.style.height = displaySize + 'px';
     this._miniCanvas.style.imageRendering = 'pixelated';
