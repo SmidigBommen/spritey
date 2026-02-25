@@ -16,6 +16,8 @@ import { PalettePanel } from './ui/PalettePanel.js';
 import { BottomBar } from './ui/BottomBar.js';
 import { LayerPanel } from './ui/LayerPanel.js';
 import { TemplatePanel } from './ui/TemplatePanel.js';
+import { ExportManager } from './core/ExportManager.js';
+import { ProjectSerializer } from './core/ProjectSerializer.js';
 import { rgbToHex, hexToRgb } from './core/ColorUtils.js';
 
 class App {
@@ -69,6 +71,8 @@ class App {
     this._setupMiniPreview();
     this._setupTabs();
     this._setupTemplateEvents();
+    this._setupExportEvents();
+    this._setupSaveLoadEvents();
 
     // Initial state
     this.toolbar.setActive(this.activeTool);
@@ -249,6 +253,24 @@ class App {
         return;
       }
 
+      // Save / Export shortcuts
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        ProjectSerializer.downloadProject(this.project);
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && !e.shiftKey) {
+        e.preventDefault();
+        ProjectSerializer.saveToStorage(this.project);
+        this._showFeedback(document.getElementById('btn-save'), 'Saved!');
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'e') {
+        e.preventDefault();
+        this._toggleExportDropdown();
+        return;
+      }
+
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       const key = e.key.toLowerCase();
 
@@ -331,6 +353,95 @@ class App {
       eventBus.emit('canvas:dirty');
       this._updateMiniPreview();
     });
+  }
+
+  _setupExportEvents() {
+    const exportBtn = document.getElementById('btn-export');
+    const dropdown = document.getElementById('export-dropdown');
+    const scaleSelect = document.getElementById('export-scale');
+
+    exportBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this._toggleExportDropdown();
+    });
+
+    // Close dropdown on outside click
+    document.addEventListener('click', (e) => {
+      if (!dropdown.classList.contains('hidden') && !dropdown.contains(e.target)) {
+        dropdown.classList.add('hidden');
+      }
+    });
+
+    dropdown.addEventListener('click', (e) => e.stopPropagation());
+
+    document.getElementById('btn-export-png').addEventListener('click', async () => {
+      const scale = parseInt(scaleSelect.value);
+      const pixels = this.project.flattenPixels();
+      const blob = await ExportManager.exportPNG(pixels, this.project.width, this.project.height, scale);
+      ExportManager.downloadBlob(blob, `${this.project.name || 'sprite'}_${scale}x.png`);
+      dropdown.classList.add('hidden');
+    });
+
+    document.getElementById('btn-export-sheet').addEventListener('click', async () => {
+      const scale = parseInt(scaleSelect.value);
+      const blob = await ExportManager.exportSpriteSheet(this.project.layers, this.project.width, this.project.height, scale);
+      ExportManager.downloadBlob(blob, `${this.project.name || 'sprite'}_sheet.png`);
+      dropdown.classList.add('hidden');
+    });
+
+    document.getElementById('btn-copy-clipboard').addEventListener('click', async () => {
+      const btn = document.getElementById('btn-copy-clipboard');
+      try {
+        const pixels = this.project.flattenPixels();
+        await ExportManager.copyToClipboard(pixels, this.project.width, this.project.height);
+        this._showFeedback(btn, 'Copied!');
+      } catch {
+        this._showFeedback(btn, 'Failed');
+      }
+      dropdown.classList.add('hidden');
+    });
+  }
+
+  _toggleExportDropdown() {
+    document.getElementById('export-dropdown').classList.toggle('hidden');
+  }
+
+  _setupSaveLoadEvents() {
+    document.getElementById('btn-save').addEventListener('click', () => {
+      ProjectSerializer.saveToStorage(this.project);
+      this._showFeedback(document.getElementById('btn-save'), 'Saved!');
+    });
+
+    document.getElementById('btn-load').addEventListener('click', () => {
+      if (ProjectSerializer.loadFromStorage(this.project)) {
+        this._onProjectLoaded();
+      }
+    });
+
+    document.getElementById('btn-download-project').addEventListener('click', () => {
+      ProjectSerializer.downloadProject(this.project);
+    });
+
+    document.getElementById('btn-upload-project').addEventListener('click', async () => {
+      const loaded = await ProjectSerializer.uploadProject(this.project);
+      if (loaded) this._onProjectLoaded();
+    });
+  }
+
+  _onProjectLoaded() {
+    this.history.reset();
+    this.renderer.resetView();
+    this.bottomBar.setSize(this.project.width);
+    this._setupMiniPreview();
+    this._updateMiniPreview();
+    eventBus.emit('layers:changed');
+    eventBus.emit('canvas:dirty');
+  }
+
+  _showFeedback(btn, text) {
+    const orig = btn.textContent;
+    btn.textContent = text;
+    setTimeout(() => { btn.textContent = orig; }, 1200);
   }
 
   _setupMiniPreview() {

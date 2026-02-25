@@ -11,6 +11,30 @@
     <!-- Top Bar -->
     <header id="top-bar">
       <div class="app-title">Sprite Creator</div>
+      <div class="top-actions">
+        <button class="top-btn" id="btn-save" title="Save (Ctrl+S)">Save</button>
+        <button class="top-btn" id="btn-load" title="Load">Load</button>
+        <div class="top-btn-group">
+          <button class="top-btn" id="btn-export" title="Export (Ctrl+Shift+E)">Export</button>
+          <div id="export-dropdown" class="export-dropdown hidden">
+            <div class="export-dropdown-title">Export PNG</div>
+            <div class="export-scale-row">
+              <label>Scale:</label>
+              <select id="export-scale" class="export-select">
+                <option value="1">1x</option>
+                <option value="2">2x</option>
+                <option value="4" selected>4x</option>
+                <option value="8">8x</option>
+              </select>
+            </div>
+            <button class="export-action-btn" id="btn-export-png">Download PNG</button>
+            <button class="export-action-btn" id="btn-export-sheet">Sprite Sheet</button>
+            <button class="export-action-btn" id="btn-copy-clipboard">Copy to Clipboard</button>
+          </div>
+        </div>
+        <button class="top-btn" id="btn-download-project" title="Download .json (Ctrl+Shift+S)">File</button>
+        <button class="top-btn" id="btn-upload-project" title="Upload .json">Open</button>
+      </div>
       <div class="top-right">
         <div class="mini-preview-wrap">
           <span class="mini-label">Preview</span>
