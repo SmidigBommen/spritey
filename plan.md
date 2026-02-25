@@ -82,7 +82,30 @@ A fully functional pixel art editor with drawing tools, color system, undo/redo,
 - API integration point for real AI backends
 - Skipped: quality ceiling too low for procedural, AI adds unwanted dependencies
 
-## Milestone 6: Animation
+## Milestone 6: Animation ✅
 
-- Timeline, onion skinning, frame-by-frame editing
-- Animated GIF / sprite sheet export
+### What was built
+
+**New files:**
+- `js/core/AnimationPlayer.js` — Playback loop with per-frame duration, play/pause/stop
+- `js/ui/TimelinePanel.js` — Frame thumbnails, drag-to-reorder, playback controls, FPS ±buttons, onion skin toggle
+
+**Modified files:**
+- `js/core/Project.js` — `frames[]` array where each frame holds its own `layers[]` and `duration`. `project.layers` is a getter into the active frame. Added frame CRUD methods, `flattenFrame(index)`, `snapshotAllFrames()`
+- `js/core/CanvasRenderer.js` — Onion skinning: previous frames tinted blue, next frames tinted red, rendered between checkerboard and current pixels
+- `js/core/HistoryManager.js` — Detects snapshot type (frame vs full) on undo/redo to save matching counterpart
+- `js/core/ExportManager.js` — Built-in GIF89a encoder (LZW, color quantization, transparency, looping), animation sprite sheet export
+- `js/core/ProjectSerializer.js` — Version 2 format with frames array, backward-compatible v1 loading
+- `js/app.js` — Frame events, playback events, onion skin toggle, keyboard shortcuts, drawing disabled during playback
+- `index.html` — Timeline div, GIF/animation sheet export buttons
+- `style.css` — 4-row CSS grid with timeline row, timeline styles
+
+### Key architectural decisions
+
+| Decision | Rationale |
+|---|---|
+| `project.layers` as getter into active frame | All existing tool/layer/rendering code works unchanged with zero modifications |
+| Two snapshot types (frame vs full) | Drawing ops only snapshot the active frame (cheap). Frame add/delete/reorder snapshot everything. |
+| Built-in GIF encoder instead of vendored lib | No external dependencies. Popularity-based color quantizer works well for pixel art (≤256 colors). |
+| Per-frame duration stored on each frame | More flexible than global FPS alone — allows variable timing per frame |
+| Onion skin as tinted overlay in renderer | Blue=previous, red=next. Rendered between checkerboard and current pixels so it doesn't interfere with the grid or selection. |

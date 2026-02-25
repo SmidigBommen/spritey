@@ -40,9 +40,7 @@ export class AnimationPlayer {
 
   _scheduleNext() {
     if (!this._playing) return;
-    const duration = this.project.getFrameDuration(this.project.activeFrameIndex);
-    // Use per-frame duration if set, otherwise derive from FPS
-    const delay = duration > 0 ? duration : Math.round(1000 / this._fps);
+    const delay = Math.round(1000 / this._fps);
     this._timerId = setTimeout(() => this._advance(), delay);
   }
 

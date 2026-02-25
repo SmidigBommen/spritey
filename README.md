@@ -11,9 +11,10 @@ Pixel art sprite creator for making game sprites (16x16 and 32x32). Browser-base
 - **Color picker**: HSV picker with hex input
 - **Palettes**: PICO-8, NES, Endesga-32, Sweetie 16, and more
 - **Templates**: 10 recolorable sprite templates for quick starts
-- **Export**: PNG at 1x-8x scale, sprite sheets, clipboard copy
-- **Save/Open**: Project files as JSON
-- **Undo/Redo**: Full multi-layer history (100 steps)
+- **Animation**: Frame-by-frame animation with timeline, playback, onion skinning
+- **Export**: PNG at 1x-8x scale, animated GIF, sprite sheets, animation sheets, clipboard copy
+- **Save/Open**: Project files as JSON (v2 format with frames, backward-compat v1)
+- **Undo/Redo**: Frame-aware history (100 steps)
 - **Canvas controls**: Zoom, pan, grid toggle
 
 ## Running
@@ -45,6 +46,11 @@ Then open `http://localhost:3000` (or `:8000` for Python).
 | Ctrl+S | Save project |
 | Ctrl+Shift+E | Export dropdown |
 | # | Toggle grid |
+| N | New frame |
+| , / < | Previous frame |
+| . / > | Next frame |
+| Space | Play/pause animation |
+| O | Toggle onion skinning |
 
 ## File Formats
 
@@ -52,20 +58,28 @@ Then open `http://localhost:3000` (or `:8000` for Python).
 
 Projects are saved as JSON files. Pixel data is stored as base64-encoded RGBA bytes.
 
+#### Version 2 (current)
+
 ```json
 {
-  "version": 1,
+  "version": 2,
   "name": "My Sprite",
   "width": 16,
   "height": 16,
+  "activeFrameIndex": 0,
   "activeLayerIndex": 0,
-  "layers": [
+  "frames": [
     {
-      "id": "1737000000000_abc123",
-      "name": "Layer 1",
-      "visible": true,
-      "opacity": 1,
-      "pixels": "<base64>"
+      "duration": 100,
+      "layers": [
+        {
+          "id": "1737000000000_abc123",
+          "name": "Layer 1",
+          "visible": true,
+          "opacity": 1,
+          "pixels": "<base64>"
+        }
+      ]
     }
   ]
 }
@@ -73,22 +87,30 @@ Projects are saved as JSON files. Pixel data is stored as base64-encoded RGBA by
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `version` | number | Format version, currently `1` |
+| `version` | number | Format version, currently `2` |
 | `name` | string | Project name, used for filename |
 | `width` / `height` | number | Canvas size (`16` or `32`) |
+| `activeFrameIndex` | number | Index of the selected frame |
 | `activeLayerIndex` | number | Index of the selected layer |
-| `layers` | array | Ordered bottom-to-top |
+| `frames` | array | Animation frames in order |
+| `frames[].duration` | number | Frame duration in milliseconds |
+| `frames[].layers` | array | Layers ordered bottom-to-top |
 | `layers[].id` | string | Unique layer identifier |
 | `layers[].name` | string | Display name |
 | `layers[].visible` | boolean | Layer visibility |
 | `layers[].opacity` | number | Layer opacity (`0`-`1`) |
 | `layers[].pixels` | string | Base64-encoded RGBA pixel data |
 
+Version 1 files (single layer list, no frames) are loaded and auto-converted to a single-frame v2 project.
+
 **Pixel data encoding**: Raw RGBA bytes (4 bytes per pixel, row-major order) encoded as base64. A 16x16 layer is 1024 bytes (~1.4KB encoded). A 32x32 layer is 4096 bytes (~5.5KB encoded).
 
-### PNG Export
+### Export Formats
 
-Exported as standard PNG files with nearest-neighbor scaling. Available at 1x, 2x, 4x, and 8x scale. Sprite sheets lay out each visible layer as a horizontal frame strip.
+- **PNG**: Standard PNG with nearest-neighbor scaling at 1x, 2x, 4x, or 8x
+- **GIF**: Animated GIF with per-frame durations, looping, transparency support
+- **Layer Sheet**: Horizontal strip of each visible layer as a PNG
+- **Animation Sheet**: Horizontal strip of all frames (flattened) as a PNG
 
 ## Tech Stack
 
@@ -97,6 +119,8 @@ Vanilla JS with ES modules. No framework, no build tools, no dependencies. Singl
 ## Architecture
 
 - **EventBus**: Pub/sub singleton for all cross-component communication
-- **Layer system**: `Project` holds `layers[]`, all tools write to the active layer via `project.setPixel()`, rendering composites via Porter-Duff over
-- **History**: Full multi-layer snapshots with live-state capture on undo/redo
+- **Frame system**: `Project.frames[]` where each frame has its own layers and duration. `project.layers` is a getter into the active frame
+- **Layer system**: All tools write to the active layer via `project.setPixel()`, rendering composites via Porter-Duff over
+- **History**: Two snapshot types — single-frame for drawing ops, full-frames for frame-level ops
+- **Animation**: `AnimationPlayer` cycles frames via setTimeout with per-frame durations
 - **Tools**: All extend a `Tool` base class with `onPointerDown/Move/Up` interface
