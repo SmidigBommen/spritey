@@ -21,6 +21,7 @@ export class ProjectSerializer {
           name: layer.name,
           visible: layer.visible,
           opacity: layer.opacity,
+          locked: layer.locked || undefined,
           pixels: ProjectSerializer._encodePixels(layer.pixels),
         })),
       })),
@@ -64,6 +65,7 @@ export class ProjectSerializer {
       layer.id = ld.id;
       layer.visible = ld.visible !== false;
       layer.opacity = ld.opacity ?? 1;
+      layer.locked = ld.locked || false;
       layer.pixels = ProjectSerializer._decodePixels(ld.pixels, data.width * data.height * 4);
       return layer;
     });
@@ -86,6 +88,7 @@ export class ProjectSerializer {
         layer.id = ld.id;
         layer.visible = ld.visible !== false;
         layer.opacity = ld.opacity ?? 1;
+      layer.locked = ld.locked || false;
         layer.pixels = ProjectSerializer._decodePixels(ld.pixels, data.width * data.height * 4);
         return layer;
       }),

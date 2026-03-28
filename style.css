@@ -315,9 +315,13 @@ body {
 }
 
 .tool-label {
-  font-size: 9px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.tool-hotkey {
+  font-weight: 700;
 }
 
 .toolbar-divider {
@@ -488,6 +492,23 @@ body {
   color: var(--text-muted);
 }
 
+.layer-lock {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0 2px;
+  opacity: 0.4;
+}
+
+.layer-lock.locked {
+  opacity: 1;
+}
+
+.layer-item.locked .layer-name {
+  opacity: 0.5;
+}
+
 .layer-name {
   flex: 1;
   font-size: 11px;
@@ -495,6 +516,19 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  cursor: text;
+}
+
+.layer-name-input {
+  flex: 1;
+  font-size: 11px;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--accent);
+  border-radius: 2px;
+  padding: 1px 4px;
+  outline: none;
+  min-width: 0;
 }
 
 .layer-opacity {

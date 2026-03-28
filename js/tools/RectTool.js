@@ -2,7 +2,7 @@ import { Tool } from './Tool.js';
 
 export class RectTool extends Tool {
   constructor() {
-    super('Rect', 'R', 'r');
+    super('Rect', '▭', 'r');
     this._startX = null;
     this._startY = null;
     this._drawing = false;

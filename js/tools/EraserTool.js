@@ -4,7 +4,7 @@ import { brushFootprint } from './BrushUtils.js';
 
 export class EraserTool extends Tool {
   constructor() {
-    super('Eraser', 'E', 'e');
+    super('Eraser', '◻', 'e');
     this._lastX = null;
     this._lastY = null;
     this.supportsBrushSize = true;

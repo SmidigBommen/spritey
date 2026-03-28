@@ -32,6 +32,7 @@ export class Project {
   }
 
   setPixel(x, y, r, g, b, a = 255) {
+    if (this.activeLayer.locked) return;
     this.activeLayer.setPixel(x, y, r, g, b, a);
   }
 

@@ -3,7 +3,7 @@ import { brushFootprint } from './BrushUtils.js';
 
 export class PencilTool extends Tool {
   constructor() {
-    super('Brush', 'B', 'b');
+    super('Brush', '✎', 'b');
     this._lastX = null;
     this._lastY = null;
     this.pixelPerfect = false;

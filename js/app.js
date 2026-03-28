@@ -9,6 +9,7 @@ import { EraserTool } from './tools/EraserTool.js';
 import { FillTool } from './tools/FillTool.js';
 import { LineTool } from './tools/LineTool.js';
 import { RectTool } from './tools/RectTool.js';
+import { EllipseTool } from './tools/EllipseTool.js';
 import { EyedropperTool } from './tools/EyedropperTool.js';
 import { SelectTool } from './tools/SelectTool.js';
 import { SymmetryTool } from './tools/SymmetryTool.js';
@@ -50,6 +51,7 @@ class App {
       new FillTool(),
       new LineTool(),
       new RectTool(),
+      new EllipseTool(),
       new EyedropperTool(),
       this._selectTool,
       this._symmetryTool,
@@ -151,8 +153,16 @@ class App {
 
       if (x >= 0 && x < this.project.width && y >= 0 && y < this.project.height) {
         eventBus.emit('cursor:move', { x, y });
+        if (this._brushSize >= 3 && this.activeTool.supportsBrushSize) {
+          this.renderer.brushCursor = { x, y, size: this._brushSize };
+          this.renderer.markDirty();
+        }
       } else {
         eventBus.emit('cursor:leave');
+        if (this.renderer.brushCursor) {
+          this.renderer.brushCursor = null;
+          this.renderer.markDirty();
+        }
       }
 
       if (!isDrawing) return;
@@ -175,7 +185,11 @@ class App {
     canvas.addEventListener('pointerup', endDraw);
     canvas.addEventListener('pointercancel', endDraw);
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
-    canvas.addEventListener('pointerleave', () => eventBus.emit('cursor:leave'));
+    canvas.addEventListener('pointerleave', () => {
+      eventBus.emit('cursor:leave');
+      this.renderer.brushCursor = null;
+      this.renderer.markDirty();
+    });
   }
 
   _setupColorEvents() {
@@ -266,6 +280,19 @@ class App {
     eventBus.on('layer:reorder', ({ from, to }) => this.project.reorderLayer(from, to));
     eventBus.on('layer:visibility', ({ index, visible }) => this.project.setLayerVisibility(index, visible));
     eventBus.on('layer:opacity', ({ index, opacity }) => this.project.setLayerOpacity(index, opacity));
+    eventBus.on('layer:rename', ({ index, name }) => {
+      if (this.project.layers[index]) {
+        this.project.layers[index].name = name;
+        eventBus.emit('layers:changed');
+      }
+    });
+    eventBus.on('layer:locked', ({ index, locked }) => {
+      if (this.project.layers[index]) {
+        this.project.layers[index].locked = locked;
+        eventBus.emit('layers:changed');
+        eventBus.emit('canvas:dirty');
+      }
+    });
   }
 
   _setupFrameEvents() {

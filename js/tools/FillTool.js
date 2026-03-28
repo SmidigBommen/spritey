@@ -3,7 +3,7 @@ import { colorsMatch } from '../core/ColorUtils.js';
 
 export class FillTool extends Tool {
   constructor() {
-    super('Fill', 'G', 'g');
+    super('Fill', '◧', 'g');
   }
 
   onPointerDown(x, y, project, ctx) {

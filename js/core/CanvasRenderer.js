@@ -25,6 +25,9 @@ export class CanvasRenderer {
     // Preview overlay for tools (line, rect, floating selection)
     this.previewPixels = null;
 
+    // Brush cursor overlay { x, y, size }
+    this.brushCursor = null;
+
     // Selection rectangle in pixel coords { x, y, w, h }
     this.selectionRect = null;
 
@@ -215,6 +218,17 @@ export class CanvasRenderer {
         ctx.fillStyle = `rgba(${r},${g},${b},${(a ?? 255) / 255})`;
         ctx.fillRect(originX + x * z, originY + y * z, z, z);
       }
+    }
+
+    // Draw brush cursor outline
+    if (this.brushCursor) {
+      const { x: bx, y: by, size } = this.brushCursor;
+      const offset = Math.floor(size / 2);
+      const sx = originX + (bx - offset) * z;
+      const sy = originY + (by - offset) * z;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(sx + 0.5, sy + 0.5, size * z - 1, size * z - 1);
     }
 
     // Draw selection rect (marching ants)

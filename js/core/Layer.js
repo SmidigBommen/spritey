@@ -7,6 +7,7 @@ export class Layer {
     this.pixels = new Uint8ClampedArray(width * height * 4);
     this.visible = true;
     this.opacity = 1;
+    this.locked = false;
   }
 
   clone() {
@@ -15,6 +16,7 @@ export class Layer {
     copy.pixels.set(this.pixels);
     copy.visible = this.visible;
     copy.opacity = this.opacity;
+    copy.locked = this.locked;
     return copy;
   }
 

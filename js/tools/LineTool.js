@@ -4,7 +4,7 @@ import { brushFootprint } from './BrushUtils.js';
 
 export class LineTool extends Tool {
   constructor() {
-    super('Line', 'L', 'l');
+    super('Line', '╲', 'l');
     this._startX = null;
     this._startY = null;
     this._drawing = false;

@@ -93,10 +93,43 @@ export class LayerPanel {
     });
     item.appendChild(visBtn);
 
-    // Layer name
+    // Lock toggle
+    const lockBtn = document.createElement('button');
+    lockBtn.className = 'layer-lock' + (layer.locked ? ' locked' : '');
+    lockBtn.title = layer.locked ? 'Unlock layer' : 'Lock layer';
+    lockBtn.textContent = layer.locked ? '🔒' : '🔓';
+    lockBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      eventBus.emit('layer:locked', { index, locked: !layer.locked });
+    });
+    item.appendChild(lockBtn);
+
+    if (layer.locked) item.classList.add('locked');
+
+    // Layer name (double-click to rename)
     const name = document.createElement('span');
     name.className = 'layer-name';
     name.textContent = layer.name;
+    name.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'layer-name-input';
+      input.value = layer.name;
+      name.replaceWith(input);
+      input.focus();
+      input.select();
+      const commit = () => {
+        const newName = input.value.trim() || layer.name;
+        eventBus.emit('layer:rename', { index, name: newName });
+      };
+      input.addEventListener('blur', commit);
+      input.addEventListener('keydown', (ke) => {
+        if (ke.key === 'Enter') input.blur();
+        if (ke.key === 'Escape') { input.value = layer.name; input.blur(); }
+        ke.stopPropagation();
+      });
+    });
     item.appendChild(name);
 
     // Opacity slider

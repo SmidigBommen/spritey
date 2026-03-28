@@ -22,7 +22,11 @@ export class Toolbar {
       const btn = document.createElement('button');
       btn.className = 'tool-btn';
       btn.title = `${tool.name} (${tool.shortcut.toUpperCase()})`;
-      btn.innerHTML = `<span class="tool-icon">${tool.icon}</span><span class="tool-label">${tool.name}</span>`;
+      const labelHtml = tool.name.replace(
+        new RegExp(tool.shortcut, 'i'),
+        m => `<strong class="tool-hotkey">${m}</strong>`
+      );
+      btn.innerHTML = `<span class="tool-icon">${tool.icon}</span><span class="tool-label">${labelHtml}</span>`;
       btn.addEventListener('click', () => {
         eventBus.emit('tool:select', tool);
       });
