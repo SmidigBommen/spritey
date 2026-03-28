@@ -57,7 +57,11 @@ class App {
     this.activeTool = this.tools[0];
 
     // UI
-    this.toolbar = new Toolbar(document.getElementById('toolbar'), this.tools);
+    this.toolbar = new Toolbar(
+      document.getElementById('toolbar'),
+      this.tools,
+      document.getElementById('options-bar'),
+    );
     this.palettePanel = new PalettePanel(document.getElementById('palette-panel'));
     this.colorPicker = new ColorPicker(document.getElementById('color-picker'));
     this.bottomBar = new BottomBar(document.getElementById('bottom-bar'));
@@ -710,12 +714,14 @@ class App {
   }
 
   _setupMiniPreview() {
-    const size = this.project.width;
-    this._miniCanvas.width = size;
-    this._miniCanvas.height = size;
-    const displaySize = 32;
-    this._miniCanvas.style.width = displaySize + 'px';
-    this._miniCanvas.style.height = displaySize + 'px';
+    const pw = this.project.width;
+    const ph = this.project.height;
+    this._miniCanvas.width = pw;
+    this._miniCanvas.height = ph;
+    const displaySize = 64;
+    const scale = displaySize / Math.max(pw, ph);
+    this._miniCanvas.style.width = Math.round(pw * scale) + 'px';
+    this._miniCanvas.style.height = Math.round(ph * scale) + 'px';
     this._miniCanvas.style.imageRendering = 'pixelated';
   }
 

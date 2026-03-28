@@ -16,6 +16,7 @@
   --radius: 4px;
   --panel-width: 200px;
   --topbar-height: 40px;
+  --optbar-height: 36px;
   --bottombar-height: 32px;
   --timeline-height: 130px;
 }
@@ -42,9 +43,10 @@ body {
 #app {
   display: grid;
   grid-template-columns: auto 1fr var(--panel-width);
-  grid-template-rows: var(--topbar-height) 1fr var(--timeline-height) var(--bottombar-height);
+  grid-template-rows: var(--topbar-height) var(--optbar-height) 1fr var(--timeline-height) var(--bottombar-height);
   grid-template-areas:
     "topbar   topbar   topbar"
+    "optbar   optbar   optbar"
     "toolbar  canvas   right"
     "toolbar  timeline right"
     "bottom   bottom   bottom";
@@ -73,6 +75,72 @@ body {
 .project-name {
   color: var(--text-secondary);
   font-weight: 400;
+}
+
+/* ── Options Bar ── */
+#options-bar {
+  grid-area: optbar;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.optbar-tool-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-right: 4px;
+}
+
+.optbar-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+}
+
+.optbar-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.optbar-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-right: 2px;
+}
+
+.optbar-btn {
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.optbar-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.optbar-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.optbar-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 /* ── Top Actions ── */
@@ -168,21 +236,19 @@ body {
   color: #fff;
 }
 
-.top-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .mini-preview-wrap {
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 6px;
+  padding: 12px 0;
 }
 
 .mini-label {
-  color: var(--text-secondary);
-  font-size: 11px;
+  color: var(--text-muted);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 #mini-preview {
@@ -262,51 +328,6 @@ body {
 
 .action-btn .tool-label {
   font-size: 10px;
-}
-
-.toolbar-options {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 4px 0;
-}
-
-.toolbar-option-label {
-  font-size: 9px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-muted);
-  padding: 0 6px;
-}
-
-.toolbar-option-row {
-  display: flex;
-  gap: 2px;
-  padding: 0 4px;
-}
-
-.tool-option-btn {
-  flex: 1;
-  padding: 3px 2px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-input);
-  color: var(--text-secondary);
-  cursor: pointer;
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-}
-
-.tool-option-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-}
-
-.tool-option-btn.active {
-  background: var(--bg-active);
-  border-color: var(--accent);
-  color: var(--text-primary);
 }
 
 /* ── Main Canvas ── */

@@ -1,11 +1,11 @@
 import { eventBus } from '../core/EventBus.js';
 
 export class Toolbar {
-  constructor(container, tools) {
+  constructor(container, tools, optionsBar) {
     this.container = container;
     this.tools = tools;
+    this._optionsBar = optionsBar;
     this._buttons = new Map();
-    this._optionsContainer = null;
     this._brushSize = 1;
     this._build();
   }
@@ -29,11 +29,6 @@ export class Toolbar {
       this._buttons.set(tool, btn);
       this.container.appendChild(btn);
     }
-
-    // Tool options area (e.g. symmetry axis)
-    this._optionsContainer = document.createElement('div');
-    this._optionsContainer.className = 'toolbar-options';
-    this.container.appendChild(this._optionsContainer);
 
     // Undo / Redo buttons
     const divider = document.createElement('div');
@@ -84,74 +79,86 @@ export class Toolbar {
   }
 
   _renderOptions(tool) {
-    this._optionsContainer.innerHTML = '';
+    this._optionsBar.innerHTML = '';
+
+    // Tool name
+    const nameEl = document.createElement('span');
+    nameEl.className = 'optbar-tool-name';
+    nameEl.textContent = tool.name;
+    this._optionsBar.appendChild(nameEl);
+
+    const hasOptions = tool.supportsBrushSize ||
+      typeof tool.pixelPerfect !== 'undefined' ||
+      typeof tool.axis !== 'undefined';
+    if (!hasOptions) return;
+
+    this._optionsBar.appendChild(this._makeDivider());
 
     if (tool.supportsBrushSize) {
-      const label = document.createElement('div');
-      label.className = 'toolbar-option-label';
-      label.textContent = 'Brush';
-      this._optionsContainer.appendChild(label);
-
-      const row = document.createElement('div');
-      row.className = 'toolbar-option-row';
+      const group = this._makeGroup('Size');
       for (let s = 1; s <= 4; s++) {
         const btn = document.createElement('button');
-        btn.className = 'tool-option-btn' + (s === this._brushSize ? ' active' : '');
+        btn.className = 'optbar-btn' + (s === this._brushSize ? ' active' : '');
         btn.textContent = `${s}`;
         btn.title = `Brush size ${s}x${s}`;
         btn.addEventListener('click', () => {
           this._brushSize = s;
           eventBus.emit('tool:option', { brushSize: s });
-          row.querySelectorAll('.tool-option-btn').forEach(b => b.classList.remove('active'));
+          group.querySelectorAll('.optbar-btn').forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
         });
-        row.appendChild(btn);
+        group.appendChild(btn);
       }
-      this._optionsContainer.appendChild(row);
+      this._optionsBar.appendChild(group);
     }
 
     if (typeof tool.pixelPerfect !== 'undefined') {
-      const row = document.createElement('div');
-      row.className = 'toolbar-option-row';
+      this._optionsBar.appendChild(this._makeDivider());
       const btn = document.createElement('button');
-      btn.className = 'tool-option-btn' + (tool.pixelPerfect ? ' active' : '');
+      btn.className = 'optbar-btn' + (tool.pixelPerfect ? ' active' : '');
       btn.textContent = 'Pixel Perfect';
-      btn.title = this._brushSize > 1 ? 'Requires brush size 1' : 'Remove L-shaped corner pixels for cleaner lines';
+      btn.title = this._brushSize > 1 ? 'Requires brush size 1' : 'Remove L-shaped corner pixels';
       btn.disabled = this._brushSize > 1;
       btn.addEventListener('click', () => {
         const enabled = !tool.pixelPerfect;
         eventBus.emit('tool:option', { pixelPerfect: enabled });
         btn.classList.toggle('active', enabled);
       });
-      row.appendChild(btn);
-      this._optionsContainer.appendChild(row);
+      this._optionsBar.appendChild(btn);
     }
 
     if (typeof tool.axis !== 'undefined') {
-      // Symmetry axis toggle buttons
-      const label = document.createElement('div');
-      label.className = 'toolbar-option-label';
-      label.textContent = 'Axis';
-      this._optionsContainer.appendChild(label);
-
-      const axes = ['x', 'y', 'xy'];
-      const row = document.createElement('div');
-      row.className = 'toolbar-option-row';
-
-      for (const axis of axes) {
+      this._optionsBar.appendChild(this._makeDivider());
+      const group = this._makeGroup('Axis');
+      for (const axis of ['x', 'y', 'xy']) {
         const btn = document.createElement('button');
-        btn.className = 'tool-option-btn' + (tool.axis === axis ? ' active' : '');
+        btn.className = 'optbar-btn' + (tool.axis === axis ? ' active' : '');
         btn.textContent = axis.toUpperCase();
         btn.title = `Mirror axis: ${axis.toUpperCase()}`;
         btn.addEventListener('click', () => {
           eventBus.emit('tool:option', { axis });
-          // Update button states
-          row.querySelectorAll('.tool-option-btn').forEach(b => b.classList.remove('active'));
+          group.querySelectorAll('.optbar-btn').forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
         });
-        row.appendChild(btn);
+        group.appendChild(btn);
       }
-      this._optionsContainer.appendChild(row);
+      this._optionsBar.appendChild(group);
     }
+  }
+
+  _makeGroup(label) {
+    const group = document.createElement('div');
+    group.className = 'optbar-group';
+    const lbl = document.createElement('span');
+    lbl.className = 'optbar-label';
+    lbl.textContent = label;
+    group.appendChild(lbl);
+    return group;
+  }
+
+  _makeDivider() {
+    const div = document.createElement('div');
+    div.className = 'optbar-divider';
+    return div;
   }
 }
