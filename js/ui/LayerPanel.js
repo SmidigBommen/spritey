@@ -4,7 +4,6 @@ export class LayerPanel {
   constructor(container, project) {
     this.container = container;
     this.project = project;
-    this._dragState = null;
     this._build();
     this._setupEvents();
   }
@@ -20,13 +19,31 @@ export class LayerPanel {
     title.textContent = 'Layers';
     controls.appendChild(title);
 
+    const btnRow = document.createElement('div');
+    btnRow.className = 'layer-btn-row';
+
+    const upBtn = document.createElement('button');
+    upBtn.className = 'layer-add-btn';
+    upBtn.title = 'Move layer up';
+    upBtn.textContent = '▲';
+    upBtn.addEventListener('click', () => this._moveActive(1));
+    btnRow.appendChild(upBtn);
+
+    const downBtn = document.createElement('button');
+    downBtn.className = 'layer-add-btn';
+    downBtn.title = 'Move layer down';
+    downBtn.textContent = '▼';
+    downBtn.addEventListener('click', () => this._moveActive(-1));
+    btnRow.appendChild(downBtn);
+
     const addBtn = document.createElement('button');
     addBtn.className = 'layer-add-btn';
     addBtn.title = 'Add Layer';
     addBtn.textContent = '+';
     addBtn.addEventListener('click', () => eventBus.emit('layer:add'));
-    controls.appendChild(addBtn);
+    btnRow.appendChild(addBtn);
 
+    controls.appendChild(btnRow);
     this.container.appendChild(controls);
 
     this._list = document.createElement('div');
@@ -53,11 +70,17 @@ export class LayerPanel {
     }
   }
 
+  _moveActive(direction) {
+    const from = this.project.activeLayerIndex;
+    const to = from + direction;
+    if (to < 0 || to >= this.project.layers.length) return;
+    eventBus.emit('layer:reorder', { from, to });
+  }
+
   _createLayerItem(layer, index, isActive) {
     const item = document.createElement('div');
     item.className = 'layer-item' + (isActive ? ' active' : '');
     item.dataset.index = index;
-    item.draggable = true;
 
     // Visibility toggle
     const visBtn = document.createElement('button');
@@ -66,7 +89,7 @@ export class LayerPanel {
     visBtn.textContent = layer.visible ? '👁' : '○';
     visBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      eventBus.emit('layer:visibility', { index, visible: !layer.visible }); // handled directly by app.js
+      eventBus.emit('layer:visibility', { index, visible: !layer.visible });
     });
     item.appendChild(visBtn);
 
@@ -86,7 +109,7 @@ export class LayerPanel {
     opacitySlider.title = `Opacity: ${Math.round(layer.opacity * 100)}%`;
     opacitySlider.addEventListener('input', (e) => {
       e.stopPropagation();
-      eventBus.emit('layer:opacity', { index, opacity: parseInt(e.target.value) / 100 }); // handled directly by app.js
+      eventBus.emit('layer:opacity', { index, opacity: parseInt(e.target.value) / 100 });
     });
     opacitySlider.addEventListener('click', (e) => e.stopPropagation());
     item.appendChild(opacitySlider);
@@ -107,33 +130,6 @@ export class LayerPanel {
     // Click to select
     item.addEventListener('click', () => {
       eventBus.emit('layer:select', { index });
-    });
-
-    // Drag to reorder
-    item.addEventListener('dragstart', (e) => {
-      this._dragState = { fromIndex: index };
-      item.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'move';
-    });
-    item.addEventListener('dragend', () => {
-      item.classList.remove('dragging');
-      this._list.querySelectorAll('.layer-item').forEach(el => el.classList.remove('drag-over'));
-      this._dragState = null;
-    });
-    item.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      this._list.querySelectorAll('.layer-item').forEach(el => el.classList.remove('drag-over'));
-      item.classList.add('drag-over');
-    });
-    item.addEventListener('drop', (e) => {
-      e.preventDefault();
-      if (!this._dragState) return;
-      const toIndex = index;
-      const fromIndex = this._dragState.fromIndex;
-      if (fromIndex !== toIndex) {
-        eventBus.emit('layer:reorder', { from: fromIndex, to: toIndex });
-      }
     });
 
     return item;

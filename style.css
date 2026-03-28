@@ -425,15 +425,20 @@ body {
   margin-bottom: 6px;
 }
 
+.layer-btn-row {
+  display: flex;
+  gap: 4px;
+}
+
 .layer-add-btn {
   background: var(--bg-input);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   color: var(--text-primary);
   cursor: pointer;
-  font-size: 16px;
+  font-size: 12px;
   line-height: 1;
-  padding: 1px 8px;
+  padding: 3px 8px;
 }
 
 .layer-add-btn:hover {
@@ -468,14 +473,6 @@ body {
   border-color: var(--accent);
 }
 
-.layer-item.dragging {
-  opacity: 0.4;
-}
-
-.layer-item.drag-over {
-  border-color: var(--accent);
-  background: var(--bg-hover);
-}
 
 .layer-visibility {
   background: none;
