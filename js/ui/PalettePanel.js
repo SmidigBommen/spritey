@@ -48,6 +48,18 @@ export class PalettePanel {
     this._currentColor = [0, 0, 0, 255];
   }
 
+  getCustomPalettes() {
+    return this._customPalettes;
+  }
+
+  setCustomPalettes(palettes) {
+    this._customPalettes = palettes || [];
+    this._currentPalette = 0;
+    this._rebuildSelect();
+    this._renderSwatches();
+    this._renderActions();
+  }
+
   _getAllPalettes() {
     return [...PALETTES, ...this._customPalettes];
   }

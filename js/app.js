@@ -569,8 +569,11 @@ class App {
     });
 
     document.getElementById('btn-open').addEventListener('click', async () => {
-      const loaded = await ProjectSerializer.uploadProject(this.project);
-      if (loaded) this._onProjectLoaded();
+      const result = await ProjectSerializer.uploadProject(this.project);
+      if (result) {
+        this.palettePanel.setCustomPalettes(result.customPalettes);
+        this._onProjectLoaded();
+      }
     });
   }
 
@@ -636,7 +639,9 @@ class App {
       this.project.name = name.trim() || 'Untitled';
       this._updateProjectName();
     }
-    ProjectSerializer.downloadProject(this.project);
+    ProjectSerializer.downloadProject(this.project, {
+      customPalettes: this.palettePanel.getCustomPalettes(),
+    });
   }
 
   _updateProjectName() {

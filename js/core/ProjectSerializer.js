@@ -6,8 +6,8 @@ export class ProjectSerializer {
   /**
    * Serialize a Project to version 2 format with frames.
    */
-  static serialize(project) {
-    return {
+  static serialize(project, { customPalettes = [] } = {}) {
+    const data = {
       version: CURRENT_VERSION,
       name: project.name,
       width: project.width,
@@ -25,11 +25,18 @@ export class ProjectSerializer {
         })),
       })),
     };
+    if (customPalettes.length > 0) {
+      data.customPalettes = customPalettes;
+    }
+    return data;
   }
 
   /**
    * Deserialize data into an existing Project instance (mutates in-place).
    * Supports v1 (single layer list) and v2 (frames) formats.
+   */
+  /**
+   * @returns {{ customPalettes: Array }} extra data from the file
    */
   static deserialize(project, data) {
     if (!data || !data.version) {
@@ -47,6 +54,8 @@ export class ProjectSerializer {
     } else {
       throw new Error(`Unsupported project version: ${data.version}`);
     }
+
+    return { customPalettes: data.customPalettes || [] };
   }
 
   static _deserializeV1(project, data) {
@@ -97,8 +106,8 @@ export class ProjectSerializer {
   }
 
   /** Download project as a .json file. */
-  static downloadProject(project) {
-    const json = JSON.stringify(ProjectSerializer.serialize(project), null, 2);
+  static downloadProject(project, opts) {
+    const json = JSON.stringify(ProjectSerializer.serialize(project, opts), null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -126,8 +135,8 @@ export class ProjectSerializer {
         reader.onload = () => {
           try {
             const data = JSON.parse(reader.result);
-            ProjectSerializer.deserialize(project, data);
-            resolve(true);
+            const extra = ProjectSerializer.deserialize(project, data);
+            resolve(extra);
           } catch {
             resolve(false);
           }
