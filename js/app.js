@@ -3,6 +3,7 @@ import { Project } from './core/Project.js';
 import { CanvasRenderer } from './core/CanvasRenderer.js';
 import { HistoryManager } from './core/HistoryManager.js';
 import { AnimationPlayer } from './core/AnimationPlayer.js';
+import { Layer } from './core/Layer.js';
 import { PencilTool } from './tools/PencilTool.js';
 import { EraserTool } from './tools/EraserTool.js';
 import { FillTool } from './tools/FillTool.js';
@@ -37,6 +38,7 @@ class App {
     // Colors
     this._primaryColor = [0, 0, 0, 255];
     this._secondaryColor = [255, 255, 255, 255];
+    this._brushSize = 1;
 
     // Tools
     this._pencilTool = new PencilTool();
@@ -86,7 +88,7 @@ class App {
     // Initial state
     this.toolbar.setActive(this.activeTool);
     this.bottomBar.setZoom(this.renderer.zoom);
-    this.bottomBar.setSize(this.project.width);
+    this.bottomBar.setSize(this.project.width, this.project.height);
     this._updateProjectName();
   }
 
@@ -109,11 +111,13 @@ class App {
     const getCtx = () => ({
       color: this._primaryColor,
       renderer: this.renderer,
+      brushSize: this._brushSize,
     });
 
     canvas.addEventListener('pointerdown', (e) => {
       if (e.button === 1) return; // Middle click = pan
       if (e.button === 2) return;
+      if (this.renderer._spaceHeld) return; // Spacebar = pan
       if (this.player.playing) return; // No drawing during playback
 
       const { x, y } = this.renderer.screenToPixel(e.clientX, e.clientY);
@@ -249,15 +253,6 @@ class App {
       this.renderer.resetView();
     });
 
-    eventBus.on('canvas:resize', (size) => {
-      this.history.pushState();
-      this.project.resize(size, size);
-      this.history.reset();
-      this.bottomBar.setSize(size);
-      this.renderer.resetView();
-      this._setupMiniPreview();
-      this._updateMiniPreview();
-    });
   }
 
   _setupLayerEvents() {
@@ -378,11 +373,10 @@ class App {
         return;
       }
 
-      // Play/pause toggle
-      if (e.key === ' ') {
-        e.preventDefault();
+      // Play/pause toggle (P key; spacebar is reserved for pan)
+      if (key === 'p') {
         if (this.project.frameCount > 1) {
-          this.player.play(); // toggles play/pause
+          this.player.play();
         }
         return;
       }
@@ -446,7 +440,14 @@ class App {
         this._symmetryTool.axis = opts.axis;
       }
       if (opts.pixelPerfect !== undefined) {
-        this._pencilTool.pixelPerfect = opts.pixelPerfect;
+        this._pencilTool.pixelPerfect = opts.pixelPerfect && this._brushSize === 1;
+      }
+      if (opts.brushSize !== undefined) {
+        this._brushSize = opts.brushSize;
+        if (opts.brushSize > 1 && this._pencilTool.pixelPerfect) {
+          this._pencilTool.pixelPerfect = false;
+          this.toolbar.setActive(this.activeTool);
+        }
       }
     });
   }
@@ -559,6 +560,10 @@ class App {
   }
 
   _setupSaveLoadEvents() {
+    document.getElementById('btn-new').addEventListener('click', () => {
+      this._showNewSpriteDialog();
+    });
+
     document.getElementById('btn-save').addEventListener('click', () => {
       this._saveProject();
     });
@@ -567,6 +572,61 @@ class App {
       const loaded = await ProjectSerializer.uploadProject(this.project);
       if (loaded) this._onProjectLoaded();
     });
+  }
+
+  _showNewSpriteDialog() {
+    const dialog = document.getElementById('new-sprite-dialog');
+    const nameInput = document.getElementById('new-sprite-name');
+    const widthInput = document.getElementById('new-sprite-width');
+    const heightInput = document.getElementById('new-sprite-height');
+
+    nameInput.value = 'Untitled';
+    widthInput.value = '16';
+    heightInput.value = '16';
+
+    dialog.showModal();
+    nameInput.select();
+
+    let heightTouched = false;
+    const onWidthInput = () => {
+      if (!heightTouched) heightInput.value = widthInput.value;
+    };
+    const onHeightInput = () => { heightTouched = true; };
+    widthInput.addEventListener('input', onWidthInput);
+    heightInput.addEventListener('input', onHeightInput);
+
+    const cancel = document.getElementById('new-sprite-cancel');
+    const onCancel = () => { dialog.close(); cleanup(); };
+    cancel.addEventListener('click', onCancel);
+
+    const onSubmit = (e) => {
+      e.preventDefault();
+      const name = nameInput.value.trim() || 'Untitled';
+      const w = Math.max(1, Math.min(128, parseInt(widthInput.value) || 16));
+      const h = Math.max(1, Math.min(128, parseInt(heightInput.value) || 16));
+      dialog.close();
+      this._createNewProject(name, w, h);
+      cleanup();
+    };
+    dialog.querySelector('form').addEventListener('submit', onSubmit);
+
+    const cleanup = () => {
+      cancel.removeEventListener('click', onCancel);
+      widthInput.removeEventListener('input', onWidthInput);
+      heightInput.removeEventListener('input', onHeightInput);
+      dialog.querySelector('form').removeEventListener('submit', onSubmit);
+    };
+  }
+
+  _createNewProject(name, width, height) {
+    this.project.name = name;
+    this.project.frames = [{ layers: [new Layer(width, height, 'Layer 1')], duration: 100 }];
+    this.project._width = width;
+    this.project._height = height;
+    this.project.activeFrameIndex = 0;
+    this.project.activeLayerIndex = 0;
+    this._onProjectLoaded();
+    eventBus.emit('tool:select', this._pencilTool);
   }
 
   _saveProject() {
@@ -588,7 +648,7 @@ class App {
   _onProjectLoaded() {
     this.history.reset();
     this.renderer.resetView();
-    this.bottomBar.setSize(this.project.width);
+    this.bottomBar.setSize(this.project.width, this.project.height);
     this._setupMiniPreview();
     this._updateMiniPreview();
     this._updateProjectName();

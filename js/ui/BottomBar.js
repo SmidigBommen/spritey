@@ -9,27 +9,12 @@ export class BottomBar {
   _build() {
     this.container.innerHTML = '';
 
-    // Left section: size selector
+    // Left section: canvas size display
     const left = document.createElement('div');
     left.className = 'bottom-left';
-
-    const sizeLabel = document.createElement('span');
-    sizeLabel.textContent = 'Canvas: ';
-    left.appendChild(sizeLabel);
-
-    this._sizeSelect = document.createElement('select');
-    this._sizeSelect.className = 'size-select';
-    for (const size of [16, 32]) {
-      const opt = document.createElement('option');
-      opt.value = size;
-      opt.textContent = `${size}x${size}`;
-      this._sizeSelect.appendChild(opt);
-    }
-    this._sizeSelect.addEventListener('change', () => {
-      const size = parseInt(this._sizeSelect.value);
-      eventBus.emit('canvas:resize', size);
-    });
-    left.appendChild(this._sizeSelect);
+    this._sizeLabel = document.createElement('span');
+    this._sizeLabel.textContent = '';
+    left.appendChild(this._sizeLabel);
     this.container.appendChild(left);
 
     // Center section: cursor position
@@ -80,8 +65,8 @@ export class BottomBar {
     });
   }
 
-  setSize(size) {
-    this._sizeSelect.value = size;
+  setSize(width, height) {
+    this._sizeLabel.textContent = `${width}x${height || width}`;
   }
 
   setZoom(zoom) {

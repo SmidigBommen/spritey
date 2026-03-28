@@ -6,6 +6,7 @@ export class Toolbar {
     this.tools = tools;
     this._buttons = new Map();
     this._optionsContainer = null;
+    this._brushSize = 1;
     this._build();
   }
 
@@ -85,13 +86,38 @@ export class Toolbar {
   _renderOptions(tool) {
     this._optionsContainer.innerHTML = '';
 
+    if (tool.supportsBrushSize) {
+      const label = document.createElement('div');
+      label.className = 'toolbar-option-label';
+      label.textContent = 'Brush';
+      this._optionsContainer.appendChild(label);
+
+      const row = document.createElement('div');
+      row.className = 'toolbar-option-row';
+      for (let s = 1; s <= 4; s++) {
+        const btn = document.createElement('button');
+        btn.className = 'tool-option-btn' + (s === this._brushSize ? ' active' : '');
+        btn.textContent = `${s}`;
+        btn.title = `Brush size ${s}x${s}`;
+        btn.addEventListener('click', () => {
+          this._brushSize = s;
+          eventBus.emit('tool:option', { brushSize: s });
+          row.querySelectorAll('.tool-option-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+        });
+        row.appendChild(btn);
+      }
+      this._optionsContainer.appendChild(row);
+    }
+
     if (typeof tool.pixelPerfect !== 'undefined') {
       const row = document.createElement('div');
       row.className = 'toolbar-option-row';
       const btn = document.createElement('button');
       btn.className = 'tool-option-btn' + (tool.pixelPerfect ? ' active' : '');
       btn.textContent = 'Pixel Perfect';
-      btn.title = 'Remove L-shaped corner pixels for cleaner lines';
+      btn.title = this._brushSize > 1 ? 'Requires brush size 1' : 'Remove L-shaped corner pixels for cleaner lines';
+      btn.disabled = this._brushSize > 1;
       btn.addEventListener('click', () => {
         const enabled = !tool.pixelPerfect;
         eventBus.emit('tool:option', { pixelPerfect: enabled });

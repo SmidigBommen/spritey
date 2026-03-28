@@ -1,5 +1,6 @@
 import { Tool } from './Tool.js';
 import { bresenham } from './PencilTool.js';
+import { brushFootprint } from './BrushUtils.js';
 
 export class LineTool extends Tool {
   constructor() {
@@ -7,6 +8,7 @@ export class LineTool extends Tool {
     this._startX = null;
     this._startY = null;
     this._drawing = false;
+    this.supportsBrushSize = true;
   }
 
   onPointerDown(x, y, project, ctx) {
@@ -29,14 +31,22 @@ export class LineTool extends Tool {
     const [r, g, b, a] = ctx.color;
     const points = bresenham(this._startX, this._startY, x, y);
     for (const [px, py] of points) {
-      project.setPixel(px, py, r, g, b, a);
+      for (const [bx, by] of brushFootprint(px, py, ctx.brushSize)) {
+        project.setPixel(bx, by, r, g, b, a);
+      }
     }
   }
 
   _updatePreview(x, y, ctx) {
     const [r, g, b, a] = ctx.color;
-    const points = bresenham(this._startX, this._startY, x, y);
-    ctx.renderer.previewPixels = points.map(([px, py]) => ({ x: px, y: py, r, g, b, a }));
+    const linePoints = bresenham(this._startX, this._startY, x, y);
+    const preview = [];
+    for (const [px, py] of linePoints) {
+      for (const [bx, by] of brushFootprint(px, py, ctx.brushSize)) {
+        preview.push({ x: bx, y: by, r, g, b, a });
+      }
+    }
+    ctx.renderer.previewPixels = preview;
     ctx.renderer.markDirty();
   }
 }

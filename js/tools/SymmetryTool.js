@@ -1,5 +1,6 @@
 import { Tool } from './Tool.js';
 import { bresenham } from './PencilTool.js';
+import { brushFootprint } from './BrushUtils.js';
 
 export class SymmetryTool extends Tool {
   constructor() {
@@ -7,6 +8,7 @@ export class SymmetryTool extends Tool {
     this.axis = 'x'; // 'x' | 'y' | 'xy'
     this._lastX = null;
     this._lastY = null;
+    this.supportsBrushSize = true;
   }
 
   getCursor() { return 'crosshair'; }
@@ -15,7 +17,7 @@ export class SymmetryTool extends Tool {
     this._lastX = x;
     this._lastY = y;
     const [r, g, b, a] = ctx.color;
-    this._drawMirrored(x, y, project, r, g, b, a);
+    this._drawMirrored(x, y, project, r, g, b, a, ctx.brushSize);
   }
 
   onPointerMove(x, y, project, ctx) {
@@ -23,7 +25,7 @@ export class SymmetryTool extends Tool {
     const [r, g, b, a] = ctx.color;
     const points = bresenham(this._lastX, this._lastY, x, y);
     for (const [px, py] of points) {
-      this._drawMirrored(px, py, project, r, g, b, a);
+      this._drawMirrored(px, py, project, r, g, b, a, ctx.brushSize);
     }
     this._lastX = x;
     this._lastY = y;
@@ -34,18 +36,20 @@ export class SymmetryTool extends Tool {
     this._lastY = null;
   }
 
-  _drawMirrored(px, py, project, r, g, b, a) {
+  _drawMirrored(px, py, project, r, g, b, a, brushSize) {
     const W = project.width;
     const H = project.height;
-    project.setPixel(px, py, r, g, b, a);
-    if (this.axis === 'x' || this.axis === 'xy') {
-      project.setPixel(W - 1 - px, py, r, g, b, a);
-    }
-    if (this.axis === 'y' || this.axis === 'xy') {
-      project.setPixel(px, H - 1 - py, r, g, b, a);
-    }
-    if (this.axis === 'xy') {
-      project.setPixel(W - 1 - px, H - 1 - py, r, g, b, a);
+    for (const [bx, by] of brushFootprint(px, py, brushSize)) {
+      project.setPixel(bx, by, r, g, b, a);
+      if (this.axis === 'x' || this.axis === 'xy') {
+        project.setPixel(W - 1 - bx, by, r, g, b, a);
+      }
+      if (this.axis === 'y' || this.axis === 'xy') {
+        project.setPixel(bx, H - 1 - by, r, g, b, a);
+      }
+      if (this.axis === 'xy') {
+        project.setPixel(W - 1 - bx, H - 1 - by, r, g, b, a);
+      }
     }
   }
 }

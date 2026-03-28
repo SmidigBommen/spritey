@@ -88,11 +88,15 @@ export class CanvasRenderer {
     const ro = new ResizeObserver(() => this._resizeCanvas());
     ro.observe(this.canvas.parentElement);
 
-    // Middle-click pan
+    // Pan via middle-click or spacebar+drag
+    this._spaceHeld = false;
+
     this.canvas.addEventListener('pointerdown', (e) => {
-      if (e.button === 1) {
+      if (e.button === 1 || (e.button === 0 && this._spaceHeld)) {
         e.preventDefault();
+        e.stopPropagation();
         this._isPanning = true;
+        this._panPointerId = e.pointerId;
         this._panStart = { x: e.clientX - this._panX, y: e.clientY - this._panY };
         this.canvas.setPointerCapture(e.pointerId);
       }
@@ -105,9 +109,27 @@ export class CanvasRenderer {
       }
     });
     this.canvas.addEventListener('pointerup', (e) => {
-      if (e.button === 1) {
+      if (this._isPanning && e.pointerId === this._panPointerId) {
         this._isPanning = false;
         this._panStart = null;
+        this._panPointerId = null;
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && !e.repeat && !this._spaceHeld) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+        e.preventDefault();
+        this._spaceHeld = true;
+        this.canvas.style.cursor = 'grab';
+      }
+    });
+    document.addEventListener('keyup', (e) => {
+      if (e.code === 'Space') {
+        this._spaceHeld = false;
+        if (!this._isPanning) {
+          this.canvas.style.cursor = '';
+        }
       }
     });
 

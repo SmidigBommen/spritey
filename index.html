@@ -12,6 +12,7 @@
     <header id="top-bar">
       <div class="app-title">Sprite Creator <span id="project-name" class="project-name"></span></div>
       <div class="top-actions">
+        <button class="top-btn" id="btn-new" title="New sprite">New</button>
         <button class="top-btn" id="btn-open" title="Open .json">Open</button>
         <button class="top-btn" id="btn-save" title="Save (Ctrl+S)">Save</button>
         <div class="top-btn-group">
@@ -75,6 +76,27 @@
     <!-- Bottom Bar -->
     <footer id="bottom-bar"></footer>
   </div>
+
+  <dialog id="new-sprite-dialog" class="sprite-dialog">
+    <form method="dialog">
+      <h3 class="dialog-title">New Sprite</h3>
+      <label class="dialog-label">Name
+        <input type="text" id="new-sprite-name" class="dialog-input" value="Untitled" autocomplete="off">
+      </label>
+      <div class="dialog-row">
+        <label class="dialog-label">Width
+          <input type="number" id="new-sprite-width" class="dialog-input" value="16" min="1" max="128">
+        </label>
+        <label class="dialog-label">Height
+          <input type="number" id="new-sprite-height" class="dialog-input" value="16" min="1" max="128">
+        </label>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="dialog-btn" id="new-sprite-cancel">Cancel</button>
+        <button type="submit" class="dialog-btn dialog-btn-primary" id="new-sprite-ok">Create</button>
+      </div>
+    </form>
+  </dialog>
 
   <script type="module" src="js/app.js"></script>
 </body>

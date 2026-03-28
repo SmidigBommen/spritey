@@ -1,11 +1,13 @@
 import { Tool } from './Tool.js';
+import { brushFootprint } from './BrushUtils.js';
 
 export class PencilTool extends Tool {
   constructor() {
-    super('Pencil', 'B', 'b');
+    super('Brush', 'B', 'b');
     this._lastX = null;
     this._lastY = null;
     this.pixelPerfect = false;
+    this.supportsBrushSize = true;
     // Pixel perfect buffer: last two drawn points + original pixel at B
     this._ppA = null; // { x, y }
     this._ppB = null; // { x, y }
@@ -21,24 +23,29 @@ export class PencilTool extends Tool {
       this._ppOrigB = project.activeLayer.getPixel(x, y) || [0, 0, 0, 0];
       this._ppB = { x, y };
     }
-    project.setPixel(x, y, r, g, b, a);
+    this._stamp(x, y, project, r, g, b, a, ctx.brushSize);
   }
 
   onPointerMove(x, y, project, ctx) {
     if (this._lastX === null) return;
     const [r, g, b, a] = ctx.color;
     if (this.pixelPerfect) {
-      // No Bresenham — one pixel per pointer event, with L-corner removal
       if (x === this._ppB.x && y === this._ppB.y) return;
       this._drawPixelPerfect(x, y, project, r, g, b, a);
     } else {
       const points = bresenham(this._lastX, this._lastY, x, y);
       for (const [px, py] of points) {
-        project.setPixel(px, py, r, g, b, a);
+        this._stamp(px, py, project, r, g, b, a, ctx.brushSize);
       }
     }
     this._lastX = x;
     this._lastY = y;
+  }
+
+  _stamp(x, y, project, r, g, b, a, size) {
+    for (const [px, py] of brushFootprint(x, y, size)) {
+      project.setPixel(px, py, r, g, b, a);
+    }
   }
 
   onPointerUp() {
