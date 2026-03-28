@@ -614,6 +614,33 @@ body {
   border-color: var(--accent);
 }
 
+.palette-actions {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.palette-action-btn {
+  flex: 1;
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 3px 6px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.palette-action-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.palette-action-danger:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
 .palette-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(22px, 1fr));
@@ -632,6 +659,22 @@ body {
   transform: scale(1.2);
   border-color: var(--accent);
   z-index: 1;
+}
+
+.palette-swatch-add {
+  background: var(--bg-input);
+  color: var(--text-muted);
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--border);
+}
+
+.palette-swatch-add:hover {
+  color: var(--text-primary);
+  border-color: var(--accent);
 }
 
 /* ── Bottom Bar ── */

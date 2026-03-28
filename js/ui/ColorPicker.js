@@ -18,6 +18,9 @@ export class ColorPicker {
       this._val = v;
       this._updateFromHsv();
     });
+
+    // Emit initial color so other components stay in sync
+    this._emitColor();
   }
 
   _build() {

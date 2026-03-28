@@ -58,8 +58,8 @@ class App {
 
     // UI
     this.toolbar = new Toolbar(document.getElementById('toolbar'), this.tools);
-    this.colorPicker = new ColorPicker(document.getElementById('color-picker'));
     this.palettePanel = new PalettePanel(document.getElementById('palette-panel'));
+    this.colorPicker = new ColorPicker(document.getElementById('color-picker'));
     this.bottomBar = new BottomBar(document.getElementById('bottom-bar'));
     this.layerPanel = new LayerPanel(document.getElementById('layer-panel'), this.project);
     this.templatePanel = new TemplatePanel(document.getElementById('template-panel'));
