@@ -39,10 +39,11 @@ class App {
     this._secondaryColor = [255, 255, 255, 255];
 
     // Tools
+    this._pencilTool = new PencilTool();
     this._selectTool = new SelectTool();
     this._symmetryTool = new SymmetryTool();
     this.tools = [
-      new PencilTool(),
+      this._pencilTool,
       new EraserTool(),
       new FillTool(),
       new LineTool(),
@@ -439,10 +440,13 @@ class App {
       }
     });
 
-    // Symmetry axis toggle via tool:option
-    eventBus.on('tool:option', ({ axis }) => {
-      if (this.activeTool === this._symmetryTool) {
-        this._symmetryTool.axis = axis;
+    // Tool options via tool:option
+    eventBus.on('tool:option', (opts) => {
+      if (opts.axis !== undefined && this.activeTool === this._symmetryTool) {
+        this._symmetryTool.axis = opts.axis;
+      }
+      if (opts.pixelPerfect !== undefined) {
+        this._pencilTool.pixelPerfect = opts.pixelPerfect;
       }
     });
   }

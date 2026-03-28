@@ -85,6 +85,22 @@ export class Toolbar {
   _renderOptions(tool) {
     this._optionsContainer.innerHTML = '';
 
+    if (typeof tool.pixelPerfect !== 'undefined') {
+      const row = document.createElement('div');
+      row.className = 'toolbar-option-row';
+      const btn = document.createElement('button');
+      btn.className = 'tool-option-btn' + (tool.pixelPerfect ? ' active' : '');
+      btn.textContent = 'Pixel Perfect';
+      btn.title = 'Remove L-shaped corner pixels for cleaner lines';
+      btn.addEventListener('click', () => {
+        const enabled = !tool.pixelPerfect;
+        eventBus.emit('tool:option', { pixelPerfect: enabled });
+        btn.classList.toggle('active', enabled);
+      });
+      row.appendChild(btn);
+      this._optionsContainer.appendChild(row);
+    }
+
     if (typeof tool.axis !== 'undefined') {
       // Symmetry axis toggle buttons
       const label = document.createElement('div');
