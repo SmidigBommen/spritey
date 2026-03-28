@@ -108,6 +108,36 @@ export class SelectTool extends Tool {
     return this._selection !== null;
   }
 
+  hasFloating() {
+    return this._floatingPixels !== null;
+  }
+
+  /** Apply a transform function to the floating pixel buffer */
+  transformFloating(fn, renderer) {
+    if (!this._floatingPixels) return;
+
+    const oldW = this._floatW;
+    const oldH = this._floatH;
+    const result = fn(this._floatingPixels, oldW, oldH);
+
+    this._floatingPixels = result.pixels;
+    this._floatW = result.width;
+    this._floatH = result.height;
+
+    // Re-center if dimensions changed (rotation swaps w/h)
+    if (oldW !== result.width || oldH !== result.height) {
+      const cx = this._floatX + oldW / 2;
+      const cy = this._floatY + oldH / 2;
+      this._floatX = Math.round(cx - result.width / 2);
+      this._floatY = Math.round(cy - result.height / 2);
+    }
+
+    this._selection = { x: this._floatX, y: this._floatY, w: this._floatW, h: this._floatH };
+    renderer.selectionRect = { ...this._selection };
+    renderer.previewPixels = this._buildFloatPreview();
+    renderer.markDirty();
+  }
+
   // ── Private ──────────────────────────────────────────
 
   _isInsideSelection(x, y) {

@@ -49,7 +49,15 @@ export class Toolbar {
     this.container.appendChild(divider2);
 
     this._createActionBtn('Clear', '', () => eventBus.emit('canvas:clear'));
-    this.container.appendChild(this.container.lastChild);
+
+    const divider3 = document.createElement('div');
+    divider3.className = 'toolbar-divider';
+    this.container.appendChild(divider3);
+
+    this._createActionBtn('⟳ CW', 'Rotate 90° clockwise', () => eventBus.emit('transform:rotate-cw'));
+    this._createActionBtn('⟲ CCW', 'Rotate 90° counter-clockwise', () => eventBus.emit('transform:rotate-ccw'));
+    this._createActionBtn('⇔ H', 'Flip horizontal', () => eventBus.emit('transform:flip-h'));
+    this._createActionBtn('⇕ V', 'Flip vertical', () => eventBus.emit('transform:flip-v'));
 
     eventBus.on('history:changed', ({ canUndo, canRedo }) => {
       this._undoBtn.disabled = !canUndo;

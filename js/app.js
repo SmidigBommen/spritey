@@ -21,6 +21,7 @@ import { TimelinePanel } from './ui/TimelinePanel.js';
 import { ExportManager } from './core/ExportManager.js';
 import { ProjectSerializer } from './core/ProjectSerializer.js';
 import { rgbToHex, hexToRgb } from './core/ColorUtils.js';
+import { rotateCW, rotateCCW, flipH, flipV } from './core/PixelTransforms.js';
 
 class App {
   constructor() {
@@ -74,6 +75,7 @@ class App {
     this._setupFrameEvents();
     this._setupPlaybackEvents();
     this._setupKeyboardShortcuts();
+    this._setupTransformEvents();
     this._setupMiniPreview();
     this._setupTabs();
     this._setupTemplateEvents();
@@ -201,6 +203,37 @@ class App {
       this.project.clear();
       this._updateMiniPreview();
     });
+  }
+
+  _setupTransformEvents() {
+    const transforms = {
+      'transform:rotate-cw': rotateCW,
+      'transform:rotate-ccw': rotateCCW,
+      'transform:flip-h': flipH,
+      'transform:flip-v': flipV,
+    };
+
+    for (const [event, fn] of Object.entries(transforms)) {
+      eventBus.on(event, () => {
+        if (this.player.playing) return;
+        this.history.pushState();
+
+        if (this._selectTool.hasFloating()) {
+          this._selectTool.transformFloating(fn, this.renderer);
+        } else {
+          this._transformActiveLayer(fn);
+        }
+
+        eventBus.emit('canvas:dirty');
+        this._updateMiniPreview();
+      });
+    }
+  }
+
+  _transformActiveLayer(fn) {
+    const layer = this.project.activeLayer;
+    const result = fn(layer.pixels, layer.width, layer.height);
+    layer.pixels = result.pixels;
   }
 
   _setupCanvasControls() {
