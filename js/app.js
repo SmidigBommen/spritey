@@ -644,6 +644,11 @@ class App {
       const objUrl = URL.createObjectURL(file);
       img.onload = () => {
         URL.revokeObjectURL(objUrl);
+        const MAX_IMPORT = 1024;
+        if (img.width > MAX_IMPORT || img.height > MAX_IMPORT) {
+          alert(`Image too large (${img.width}x${img.height}). Maximum size is ${MAX_IMPORT}x${MAX_IMPORT}.`);
+          return;
+        }
         const w = img.width;
         const h = img.height;
         const offscreen = document.createElement('canvas');
