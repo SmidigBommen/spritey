@@ -477,7 +477,7 @@ class App {
 
   _setupTemplateEvents() {
     eventBus.on('template:apply', ({ template, colors }) => {
-      if (template.size !== this.project.width) return;
+      if (template.size > this.project.width || template.size > this.project.height) return;
 
       this.history.pushState();
       const size = template.size;
@@ -491,6 +491,10 @@ class App {
       }
       eventBus.emit('canvas:dirty');
       this._updateMiniPreview();
+    });
+
+    eventBus.on('template:save', () => {
+      this.templatePanel.saveAsTemplate(this.project);
     });
   }
 
@@ -564,6 +568,10 @@ class App {
       this._showNewSpriteDialog();
     });
 
+    document.getElementById('btn-import').addEventListener('click', () => {
+      this._importPNG();
+    });
+
     document.getElementById('btn-save').addEventListener('click', () => {
       this._saveProject();
     });
@@ -619,6 +627,38 @@ class App {
       heightInput.removeEventListener('input', onHeightInput);
       dialog.querySelector('form').removeEventListener('submit', onSubmit);
     };
+  }
+
+  _importPNG() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.png,.jpg,.jpeg,.gif,.bmp,.webp,image/*';
+    input.addEventListener('change', () => {
+      const file = input.files[0];
+      if (!file) return;
+      const img = new Image();
+      const objUrl = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(objUrl);
+        const w = img.width;
+        const h = img.height;
+        const offscreen = document.createElement('canvas');
+        offscreen.width = w;
+        offscreen.height = h;
+        const ctx = offscreen.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        const imageData = ctx.getImageData(0, 0, w, h);
+
+        const name = file.name.replace(/\.[^.]+$/, '') || 'Imported';
+        this._createNewProject(name, w, h);
+
+        this.project.activeLayer.pixels.set(imageData.data);
+        eventBus.emit('canvas:dirty');
+        this._updateMiniPreview();
+      };
+      img.src = objUrl;
+    });
+    input.click();
   }
 
   _createNewProject(name, width, height) {
