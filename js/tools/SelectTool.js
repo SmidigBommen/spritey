@@ -188,7 +188,7 @@ export class SelectTool extends Tool {
   }
 
   /** Build preview pixel list for floating selection at current position */
-  _buildFloatPreview(project) {
+  _buildFloatPreview(_project) {
     if (!this._floatingPixels) return null;
     const preview = [];
     for (let py = 0; py < this._floatH; py++) {

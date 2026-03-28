@@ -11,9 +11,9 @@ export class Tool {
    *  @param {import('../core/Project.js').Project} project
    *  @param {object} ctx - { color: [r,g,b,a], renderer }
    */
-  onPointerDown(x, y, project, ctx) {}
-  onPointerMove(x, y, project, ctx) {}
-  onPointerUp(x, y, project, ctx) {}
+  onPointerDown(_x, _y, _project, _ctx) {}
+  onPointerMove(_x, _y, _project, _ctx) {}
+  onPointerUp(_x, _y, _project, _ctx) {}
 
   /** Return cursor CSS class name */
   getCursor() { return 'crosshair'; }
